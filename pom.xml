@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.jenkins-ci.plugins</groupId>
+    <artifactId>plugin</artifactId>
+    <version>2.11</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>org.mably.jenkins.plugins</groupId>
+  <artifactId>kanboard-publisher</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>hpi</packaging>
+
+  <name>Kanboard Publisher</name>
+  <description>A Jenkins plugin that allows to create or update a Kanboard task as a post-build action.</description>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/Kanboard+Publisher</url>
+
+  <properties>
+    <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
+    <jenkins.version>1.625.3</jenkins.version>
+    <!-- Java Level to use. Java 7 required when using core >= 1.612 -->
+    <java.level>7</java.level>
+    <!-- Jenkins Test Harness version you use to test the plugin. -->
+    <!-- For Jenkins version >= 1.580.1 use JTH 2.x or higher. -->
+    <jenkins-test-harness.version>2.13</jenkins-test-harness.version>
+    <!-- Other properties you may want to use:
+         ~ hpi-plugin.version: The HPI Maven Plugin version used by the plugin..
+         ~ stapler-plugin.version: The Stapler Maven plugin version required by the plugin.
+    -->
+    <jsonrpc2.version>1.15</jsonrpc2.version>
+  </properties>
+
+  <!-- The default licence for Jenkins OSS Plugins is MIT. Substitute for the applicable one if needed. -->
+
+  <licenses>
+    <license>
+      <name>Affero GNU GPL v3.0</name>
+      <url>http://www.gnu.org/licenses/agpl-3.0.html</url>
+    </license>
+  </licenses>
+
+  <!-- If you want this to appear on the wiki page: -->
+  <developers>
+    <developer>
+      <id>mably</id>
+      <name>Francois Masurel</name>
+      <email>masurel@mably.com</email>
+    </developer>
+  </developers>
+
+  <!-- Assuming you want to host on @jenkinsci:
+  <scm>
+    <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+    <url>http://github.com/jenkinsci/${project.artifactId}-plugin</url>
+  </scm>
+   -->
+  <repositories>
+    <repository>
+      <id>repo.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/public/</url>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>repo.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/public/</url>
+    </pluginRepository>
+  </pluginRepositories>
+  <!-- If you want to depend on other plugins: -->
+  <dependencies>
+    <dependency>
+	  <groupId>com.thetransactioncompany</groupId>
+	  <artifactId>jsonrpc2-client</artifactId>
+	  <version>${jsonrpc2.version}</version>
+    </dependency>
+    <!-- <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>credentials</artifactId>
+      <version>1.9.4</version>
+    </dependency> -->
+  </dependencies>
+
+</project>

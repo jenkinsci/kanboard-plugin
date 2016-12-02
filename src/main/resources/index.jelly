@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+  A Jenkins plugin that allows to create or update a Kanboard task as a post-build action.
+</div>

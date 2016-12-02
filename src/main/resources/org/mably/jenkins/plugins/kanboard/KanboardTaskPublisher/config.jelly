@@ -1,0 +1,38 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:entry title="Execute only if build succeeds" field="successfulBuildOnly">
+    <f:checkbox default="true" />
+  </f:entry>
+  <f:entry title="Project Identifier (required)" field="projectIdentifier">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="Task Reference (required)" field="taskReference">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="Column" field="taskColumn">
+    <f:textbox default="0" />
+  </f:entry>  
+  <f:entry title="Owner" field="taskOwner">
+    <f:textbox />
+  </f:entry>
+  <f:advanced>
+    <f:entry title="Creator (creation only)" field="taskCreator">
+      <f:textbox />
+    </f:entry>
+     <f:entry title="Title (creation only)" field="taskTitle"
+      description="The task reference will be used if left empty.">
+      <f:textbox />
+    </f:entry>    
+    <f:entry title="Description (creation only)" field="taskDescription">
+      <f:textarea />
+    </f:entry>
+    <f:entry title="Attachments" field="taskAttachments"
+      description="Comma separated list of paths to files that will be added to the Kanboard task.">
+      <f:textbox />
+    </f:entry>    
+    <f:entry title="External links" field="taskExternalLinks"
+      description="Comma separated list of external URLs that will be added to the Kanboard task.">
+      <f:textbox />
+    </f:entry>    
+  </f:advanced>
+</j:jelly>
