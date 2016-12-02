@@ -33,6 +33,13 @@
     <f:entry title="External links" field="taskExternalLinks"
       description="Comma separated list of external URLs that will be added to the Kanboard task.">
       <f:textbox />
-    </f:entry>    
+    </f:entry>
+    <f:entry title="Swimlane" field="taskSwimlane"
+      description="At the moment should contain the swimlane technical ID (not the position) or 0 to keep it unchanged or use the default swimlane on creation.">
+      <f:textbox default="0" />
+    </f:entry>
+    <f:entry title="Color (creation only)" field="taskColor">
+      <f:select value="${taskColor}" />
+    </f:entry>
   </f:advanced>
 </j:jelly>

@@ -11,7 +11,7 @@ import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.regex.Matcher;
+import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
 import org.apache.commons.codec.binary.Base64;
@@ -20,13 +20,14 @@ import org.apache.commons.io.FileUtils;
 import com.thetransactioncompany.jsonrpc2.client.ConnectionConfigurator;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
 
-import hudson.EnvVars;
 import hudson.ProxyConfiguration;
 import jenkins.model.Jenkins;
 
 public class Utils {
 
-	static Pattern ENV_VAR_PATTERN = Pattern.compile("\\$\\w+");
+	static final String LOG_SEPARATOR = "----------";
+
+	static final Pattern ENV_VAR_PATTERN = Pattern.compile("\\$\\w+");
 
 	public static final class ApiAuthenticator implements ConnectionConfigurator {
 
@@ -48,22 +49,6 @@ public class Utils {
 		}
 	}
 
-	public static String replaceEnvVars(EnvVars environment, String value) {
-		String replacedValue = value;
-		if (value != null) {
-			Matcher matcher = ENV_VAR_PATTERN.matcher(value);
-			while (matcher.find()) {
-				String foundValue = matcher.group().substring(1);
-				String envValue = environment.get(foundValue);
-				System.out.println(foundValue + " : " + envValue);
-				if (envValue != null) {
-					replacedValue = replacedValue.replaceAll("\\$" + foundValue, envValue);
-				}
-			}
-		}
-		return replacedValue;
-	}
-
 	public static boolean isInteger(String value) {
 		boolean isInteger;
 		try {
@@ -76,13 +61,14 @@ public class Utils {
 	}
 
 	public static Proxy getJenkinsProxy(URL url) {
-		Proxy proxy;
-		ProxyConfiguration proxyConfig = Jenkins.getInstance().proxy;
-		if ((proxyConfig != null) && (!proxyConfig.name.isEmpty())
-				&& !proxyConfig.noProxyHost.contains(url.getHost())) {
-			proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyConfig.name, proxyConfig.port));
-		} else {
-			proxy = null;
+		Proxy proxy = null;
+		Jenkins jenkins = Jenkins.getInstance();
+		if (jenkins != null) {
+			ProxyConfiguration proxyConfig = jenkins.proxy;
+			if ((proxyConfig != null) && (!proxyConfig.name.isEmpty())
+					&& !proxyConfig.noProxyHost.contains(url.getHost())) {
+				proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyConfig.name, proxyConfig.port));
+			}
 		}
 		return proxy;
 	}
@@ -116,7 +102,8 @@ public class Utils {
 				conn = endpointURL.openConnection(proxy);
 			}
 			conn.connect();
-			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			BufferedReader bufferedReader = new BufferedReader(
+					new InputStreamReader(conn.getInputStream(), Charset.defaultCharset()));
 			String line;
 			while ((line = bufferedReader.readLine()) != null) {
 				valid = line.contains("jsonrpc");
@@ -136,7 +123,7 @@ public class Utils {
 	public static String encodeFileToBase64Binary(File file) throws IOException {
 		byte[] bytes = FileUtils.readFileToByteArray(file);
 		byte[] encoded = Base64.encodeBase64(bytes);
-		return new String(encoded);
+		return new String(encoded, Charset.defaultCharset());
 	}
 
 }

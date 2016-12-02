@@ -8,8 +8,12 @@ import java.util.Map;
 import javax.servlet.ServletException;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
+import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -19,7 +23,6 @@ import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
 import hudson.AbortException;
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -32,6 +35,7 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 
@@ -42,35 +46,24 @@ import net.minidev.json.JSONObject;
  */
 public class KanboardTaskPublisher extends Notifier {
 
-	private boolean successfulBuildOnly;
 	private final String projectIdentifier;
 	private final String taskReference;
-	private final String taskTitle;
-	private final String taskColumn;
-	private final String taskOwner;
-	private final String taskCreator;
-	private final String taskDescription;
-	private final String taskAttachments;
-	private final String taskExternalLinks;
+
+	private boolean successfulBuildOnly;
+	private String taskTitle;
+	private String taskColumn;
+	private String taskOwner;
+	private String taskCreator;
+	private String taskDescription;
+	private String taskAttachments;
+	private String taskExternalLinks;
+	private String taskSwimlane;
+	private String taskColor;
 
 	@DataBoundConstructor
-	public KanboardTaskPublisher(boolean successfulBuildOnly, String projectIdentifier, String taskReference,
-			String taskTitle, String taskColumn, String taskOwner, String taskCreator, String taskDescription,
-			String taskAttachments, String taskExternalLinks) {
-		this.successfulBuildOnly = successfulBuildOnly;
+	public KanboardTaskPublisher(String projectIdentifier, String taskReference) {
 		this.projectIdentifier = projectIdentifier;
 		this.taskReference = taskReference;
-		this.taskTitle = taskTitle;
-		this.taskColumn = taskColumn;
-		this.taskOwner = taskOwner;
-		this.taskCreator = taskCreator;
-		this.taskDescription = taskDescription;
-		this.taskAttachments = taskAttachments;
-		this.taskExternalLinks = taskExternalLinks;
-	}
-
-	public boolean isSuccessfulBuildOnly() {
-		return successfulBuildOnly;
 	}
 
 	public String getProjectIdentifier() {
@@ -79,6 +72,10 @@ public class KanboardTaskPublisher extends Notifier {
 
 	public String getTaskReference() {
 		return taskReference;
+	}
+
+	public boolean isSuccessfulBuildOnly() {
+		return successfulBuildOnly;
 	}
 
 	public String getTaskTitle() {
@@ -109,6 +106,64 @@ public class KanboardTaskPublisher extends Notifier {
 		return taskExternalLinks;
 	}
 
+	public String getTaskSwimlane() {
+		return taskSwimlane;
+	}
+
+	public String getTaskColor() {
+		return taskColor;
+	}
+
+	@DataBoundSetter
+	public void setSuccessfulBuildOnly(boolean successfulBuildOnly) {
+		this.successfulBuildOnly = successfulBuildOnly;
+	}
+
+	@DataBoundSetter
+	public void setTaskTitle(String taskTitle) {
+		this.taskTitle = taskTitle;
+	}
+
+	@DataBoundSetter
+	public void setTaskColumn(String taskColumn) {
+		this.taskColumn = taskColumn;
+	}
+
+	@DataBoundSetter
+	public void setTaskOwner(String taskOwner) {
+		this.taskOwner = taskOwner;
+	}
+
+	@DataBoundSetter
+	public void setTaskCreator(String taskCreator) {
+		this.taskCreator = taskCreator;
+	}
+
+	@DataBoundSetter
+	public void setTaskDescription(String taskDescription) {
+		this.taskDescription = taskDescription;
+	}
+
+	@DataBoundSetter
+	public void setTaskAttachments(String taskAttachments) {
+		this.taskAttachments = taskAttachments;
+	}
+
+	@DataBoundSetter
+	public void setTaskExternalLinks(String taskExternalLinks) {
+		this.taskExternalLinks = taskExternalLinks;
+	}
+
+	@DataBoundSetter
+	public void setTaskSwimlane(String taskSwimlane) {
+		this.taskSwimlane = taskSwimlane;
+	}
+
+	@DataBoundSetter
+	public void setTaskColor(String taskColor) {
+		this.taskColor = taskColor;
+	}
+
 	@Override
 	public BuildStepMonitor getRequiredMonitorService() {
 		return BuildStepMonitor.BUILD;
@@ -122,7 +177,7 @@ public class KanboardTaskPublisher extends Notifier {
 	@Override
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
 			throws InterruptedException, IOException {
-		if (!this.successfulBuildOnly || build.getResult().equals(Result.SUCCESS)) {
+		if (!this.successfulBuildOnly || Result.SUCCESS.equals(build.getResult())) {
 			return this.createOrUpdateTask(build, listener);
 		} else {
 			return true;
@@ -133,40 +188,23 @@ public class KanboardTaskPublisher extends Notifier {
 
 		try {
 
-			EnvVars environment = build.getEnvironment(listener);
-
-			String projectIdentifierValue = Utils.replaceEnvVars(environment, this.projectIdentifier);
-			String taskRefValue = Utils.replaceEnvVars(environment, this.taskReference);
+			String projectIdentifierValue = TokenMacro.expandAll(build, listener, this.projectIdentifier);
+			String taskRefValue = TokenMacro.expandAll(build, listener, this.taskReference);
 
 			if (StringUtils.isBlank(projectIdentifierValue) || StringUtils.isBlank(taskRefValue)) {
 				throw new AbortException("Valid project identifier and task reference are required.");
 			}
 
-			String taskColumnValue = Utils.replaceEnvVars(environment, this.taskColumn);
-			String taskOwnerValue = Utils.replaceEnvVars(environment, this.taskOwner);
-			String taskCreatorValue = Utils.replaceEnvVars(environment, this.taskCreator);
+			String taskColumnValue = TokenMacro.expandAll(build, listener, this.taskColumn);
+			String taskOwnerValue = TokenMacro.expandAll(build, listener, this.taskOwner);
+			String taskCreatorValue = TokenMacro.expandAll(build, listener, this.taskCreator);
+			String taskSwimlaneValue = TokenMacro.expandAll(build, listener, this.taskSwimlane);
+			String taskColorValue = TokenMacro.expandAll(build, listener, this.taskColor);
 
-			String[] taskAttachmentsValue;
-			if (StringUtils.isNotBlank(this.taskAttachments)) {
-				String[] pathsArray = this.taskAttachments.split(",");
-				taskAttachmentsValue = new String[pathsArray.length];
-				for (int i = 0; i < pathsArray.length; i++) {
-					taskAttachmentsValue[i] = Utils.replaceEnvVars(environment, pathsArray[i]);
-				}
-			} else {
-				taskAttachmentsValue = null;
-			}
+			String[] taskAttachmentsValue = Kanboard.getTaskAttachemntsValue(build, listener, this.taskAttachments);
 
-			String[] taskExternalLinksValue;
-			if (StringUtils.isNotBlank(this.taskExternalLinks)) {
-				String[] linksArray = this.taskExternalLinks.split(",");
-				taskExternalLinksValue = new String[linksArray.length];
-				for (int i = 0; i < linksArray.length; i++) {
-					taskExternalLinksValue[i] = Utils.replaceEnvVars(environment, linksArray[i]);
-				}
-			} else {
-				taskExternalLinksValue = null;
-			}
+			String[] taskExternalLinksValue = Kanboard.getTaskExternalLinksValue(build, listener,
+					this.taskExternalLinks);
 
 			listener.getLogger().println("Running Kanboard Task Publisher on " + getDescriptor().getEndpoint()
 					+ " for project " + projectIdentifierValue + " and task " + taskRefValue + "!");
@@ -174,356 +212,153 @@ public class KanboardTaskPublisher extends Notifier {
 			JSONRPC2Session session = Utils.initJSONRPCSession(getDescriptor().getEndpoint(),
 					getDescriptor().getApiToken());
 
-			String method;
-			int requestID = 0;
-			Map<String, Object> params;
-			JSONRPC2Request request;
-			JSONRPC2Response response;
+			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, listener, projectIdentifierValue);
+			String projectId = (String) jsonProject.get(Kanboard.ID);
 
-			// Construct new getProjectByIdentifier request
-			method = "getProjectByIdentifier";
-			params = new HashMap<String, Object>();
-			params.put("identifier", projectIdentifierValue);
+			JSONArray projectColumns = Kanboard.getProjectColumns(session, listener, projectId);
 
-			listener.getLogger().println("----------");
+			JSONObject jsonTask = Kanboard.getTaskByReference(session, listener, projectId, taskRefValue);
 
-			request = new JSONRPC2Request(method, params, requestID);
-			listener.getLogger().println(request.toJSONString());
-
-			// Send request
-			response = session.send(request);
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println("----------");
-
-			// Print response result / error
-			String projectId;
-			if (response.indicatesSuccess()) {
-				JSONObject jsonResult = (JSONObject) response.getResult();
-				projectId = (String) jsonResult.get("id");
-			} else {
-				listener.getLogger().println(response.getError().getMessage());
-				throw new AbortException(response.getError().getMessage());
-			}
-
-			// Construct new getColumns request
-			method = "getColumns";
-			params = new HashMap<String, Object>();
-			params.put("project_id", projectId);
-
-			request = new JSONRPC2Request(method, params, requestID);
-			listener.getLogger().println(request.toJSONString());
-
-			// Send request
-			response = session.send(request);
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println("----------");
-
-			// Print response result / error
-			JSONArray projectColumns;
-			if (response.indicatesSuccess()) {
-				if (response.getResult() == null) {
-					projectColumns = null;
-				} else {
-					projectColumns = (JSONArray) response.getResult();
-				}
-			} else {
-				listener.getLogger().println(response.getError().getMessage());
-				throw new AbortException(response.getError().getMessage());
-			}
-
-			// Construct new getTaskByReference request
-			method = "getTaskByReference";
-			params = new HashMap<String, Object>();
-			params.put("project_id", projectId);
-			params.put("reference", taskRefValue);
-
-			request = new JSONRPC2Request(method, params, requestID);
-			listener.getLogger().println(request.toJSONString());
-
-			// Send request
-			response = session.send(request);
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println("----------");
-
-			// Print response result / error
 			String taskId;
+			String ownerId;
 			String columnId;
-			if (response.indicatesSuccess()) {
-				if (response.getResult() == null) {
-					taskId = null;
-					columnId = null;
-				} else {
-					JSONObject jsonResult = (JSONObject) response.getResult();
-					taskId = (String) jsonResult.get("id");
-					columnId = (String) jsonResult.get("column_id");
-				}
+			Integer colPosition;
+			String swimlaneId;
+			if (jsonTask == null) {
+				taskId = null;
+				ownerId = null;
+				columnId = null;
+				colPosition = 0; // required by newColPosition calculation
+				swimlaneId = null;
 			} else {
-				listener.getLogger().println(response.getError().getMessage());
-				throw new AbortException(response.getError().getMessage());
+				taskId = (String) jsonTask.get(Kanboard.ID);
+				ownerId = (String) jsonTask.get(Kanboard.OWNER_ID);
+				columnId = (String) jsonTask.get(Kanboard.COLUMN_ID);
+				colPosition = Kanboard.getColPositionFromColumnId(columnId, projectColumns);
+				swimlaneId = (String) jsonTask.get(Kanboard.SWIMLANE_ID);
 			}
 
-			String creatorId = null;
-			if (StringUtils.isNotEmpty(taskCreatorValue)) {
-
-				// Construct new getUserByName request
-				method = "getUserByName";
-				params = new HashMap<String, Object>();
-				params.put("username", taskCreatorValue);
-
-				request = new JSONRPC2Request(method, params, requestID);
-				listener.getLogger().println(request.toJSONString());
-
-				// Send request
-				response = session.send(request);
-				listener.getLogger().println(response.toJSONString());
-				listener.getLogger().println("----------");
-
-				// Print response result / error
-				if (response.indicatesSuccess()) {
-					if (response.getResult() != null) {
-						JSONObject jsonResult = (JSONObject) response.getResult();
-						creatorId = (String) jsonResult.get("id");
-					}
-				} else {
-					listener.getLogger().println(response.getError().getMessage());
-					throw new AbortException(response.getError().getMessage());
-				}
-			}
-
-			if (taskId == null) {
-
-				// Construct new createTask request
-				method = "createTask";
-				params = new HashMap<String, Object>();
-				params.put("project_id", projectId);
-				params.put("reference", taskRefValue);
-
-				if (creatorId != null) {
-					params.put("creator_id", creatorId);
-				}
-
-				String taskTitleValue = Utils.replaceEnvVars(environment, this.taskTitle);
-				if (taskTitleValue == null) {
-					params.put("title", taskRefValue);
-				} else {
-					params.put("title", taskTitleValue);
-				}
-
-				String taskDescValue = Utils.replaceEnvVars(environment, this.taskDescription);
-				if (taskDescValue != null) {
-					params.put("description", taskDescValue);
-				}
-
-				request = new JSONRPC2Request(method, params, requestID);
-				listener.getLogger().println(request.toJSONString());
-
-				// Send request
-				response = session.send(request);
-				listener.getLogger().println(response.toJSONString());
-				listener.getLogger().println("----------");
-
-				// Print response result / error
-				if (response.indicatesSuccess()) {
-					if (response.getResult().equals(Boolean.FALSE)) {
-						throw new AbortException("Couldn't create Kanboard task");
-					} else {
-						taskId = String.valueOf(response.getResult());
-					}
-				} else {
-					listener.getLogger().println(response.getError().getMessage());
-					throw new AbortException(response.getError().getMessage());
-				}
-
-				// Construct new getTaskByReference request
-				method = "getTask";
-				params = new HashMap<String, Object>();
-				params.put("task_id", Integer.valueOf(taskId));
-
-				request = new JSONRPC2Request(method, params, requestID);
-				listener.getLogger().println(request.toJSONString());
-
-				// Send request
-				response = session.send(request);
-				listener.getLogger().println(response.toJSONString());
-				listener.getLogger().println("----------");
-
-				// Print response result / error
-				if (response.indicatesSuccess()) {
-					if (response.getResult() == null) {
-						taskId = null;
-						columnId = null;
-					} else {
-						JSONObject jsonResult = (JSONObject) response.getResult();
-						columnId = (String) jsonResult.get("column_id");
-					}
-				} else {
-					listener.getLogger().println(response.getError().getMessage());
-					throw new AbortException(response.getError().getMessage());
-				}
-
-			}
-
+			boolean columnChanged = false;
 			String newColumnId = null;
-			Integer newPosition = null;
+			Integer newColPosition = null;
 			if (StringUtils.isNotEmpty(taskColumnValue) && Utils.isInteger(taskColumnValue)) {
 
 				int columnNum = Integer.parseInt(taskColumnValue);
 
 				if (columnNum != 0) {
 
-					int currentPosition = 0;
-					for (int i = 0; i < projectColumns.size(); i++) {
-						JSONObject column = (JSONObject) projectColumns.get(i);
-						if (column.get("id").equals(columnId)) {
-							currentPosition = Integer.valueOf((String) column.get("position"));
-							break;
-						}
-					}
-
 					if (taskColumnValue.startsWith("+") || taskColumnValue.startsWith("-")) {
-						newPosition = Math.min(currentPosition + columnNum, projectColumns.size());
-						newPosition = Math.max(newPosition, 1);
+						newColPosition = Math.min(colPosition + columnNum, projectColumns.size());
 					} else {
-						newPosition = Math.min(columnNum, projectColumns.size());
+						newColPosition = Math.min(columnNum, projectColumns.size());
 					}
+					newColPosition = Math.max(newColPosition, 1);
 
-					for (int i = 0; i < projectColumns.size(); i++) {
-						JSONObject column = (JSONObject) projectColumns.get(i);
-						if (column.get("position").equals(String.valueOf(newPosition))) {
-							newColumnId = (String) column.get("id");
-							break;
-						}
-					}
+					newColumnId = Kanboard.getColumnIdFromColPosition(newColPosition, projectColumns);
+
+					columnChanged = ObjectUtils.notEqual(columnId, newColumnId);
 				}
 			}
 
+			boolean swimlaneChanged = false;
+			String newSwimlaneId = null;
+			if (StringUtils.isNotEmpty(taskSwimlaneValue) && Utils.isInteger(taskSwimlaneValue)) {
+
+				int columnNum = Integer.parseInt(taskSwimlaneValue);
+
+				if (columnNum != 0) {
+
+					// TODO idem columns?
+
+					newSwimlaneId = taskSwimlaneValue;
+
+					swimlaneChanged = ObjectUtils.notEqual(swimlaneId, newSwimlaneId);
+				}
+			}
+
+			String creatorId = null;
+			if (StringUtils.isNotEmpty(taskCreatorValue)) {
+				JSONObject jsonCreator = Kanboard.getUserByName(session, listener, taskCreatorValue);
+				if (jsonCreator != null) {
+					creatorId = (String) jsonCreator.get(Kanboard.ID);
+				}
+			}
+
+			boolean ownerChanged = false;
 			String newOwnerId = null;
 			if (StringUtils.isNotEmpty(taskOwnerValue)) {
-
 				if ((creatorId != null) && (taskOwnerValue.equals(taskCreatorValue))) {
-
 					newOwnerId = creatorId;
-
 				} else {
-
-					// Construct new getUserByName request
-					method = "getUserByName";
-					params = new HashMap<String, Object>();
-					params.put("username", taskOwnerValue);
-
-					request = new JSONRPC2Request(method, params, requestID);
-					listener.getLogger().println(request.toJSONString());
-
-					// Send request
-					response = session.send(request);
-					listener.getLogger().println(response.toJSONString());
-					listener.getLogger().println("----------");
-
-					// Print response result / error
-					if (response.indicatesSuccess()) {
-						if (response.getResult() != null) {
-							JSONObject jsonResult = (JSONObject) response.getResult();
-							newOwnerId = (String) jsonResult.get("id");
-						}
-					} else {
-						listener.getLogger().println(response.getError().getMessage());
-						throw new AbortException(response.getError().getMessage());
+					JSONObject jsonOwner = Kanboard.getUserByName(session, listener, taskOwnerValue);
+					if (jsonOwner != null) {
+						newOwnerId = (String) jsonOwner.get(Kanboard.ID);
 					}
-
 				}
-
+				ownerChanged = (newOwnerId != null) && ObjectUtils.notEqual(ownerId, newOwnerId);
 			}
 
-			if ((newColumnId != null) && (newPosition != null)) {
+			boolean newTask = (taskId == null);
+			if (newTask) {
 
-				// Construct new moveTaskPosition request
-				method = "moveTaskPosition";
-				params = new HashMap<String, Object>();
-				params.put("task_id", Integer.valueOf(taskId));
-				params.put("project_id", Integer.valueOf(projectId));
+				String taskTitleValue = TokenMacro.expandAll(build, listener, this.taskTitle);
+				String taskDescValue = TokenMacro.expandAll(build, listener, this.taskDescription);
 
-				params.put("column_id", Integer.valueOf(newColumnId));
-				params.put("position", Integer.valueOf(newPosition));
+				Object createResult = Kanboard.createTask(session, listener, projectId, taskRefValue, creatorId,
+						((newOwnerId == null) ? creatorId : newOwnerId), taskTitleValue, taskDescValue, newColumnId,
+						newSwimlaneId, taskColorValue);
 
-				request = new JSONRPC2Request(method, params, requestID);
-				listener.getLogger().println(request.toJSONString());
-
-				// Send request
-				response = session.send(request);
-				listener.getLogger().println(response.toJSONString());
-				listener.getLogger().println("----------");
-
-				// Print response result / error
-				if (response.indicatesSuccess()) {
-					listener.getLogger()
-							.println("Task " + taskRefValue + " successfully moved to column " + newPosition + ".");
+				if (createResult.equals(Boolean.FALSE)) {
+					throw new AbortException("Couldn't create Kanboard task");
 				} else {
-					listener.getLogger().println(response.getError().getMessage());
-					throw new AbortException(response.getError().getMessage());
+					taskId = String.valueOf(createResult);
+				}
+
+				jsonTask = Kanboard.getTask(session, listener, taskId);
+
+				if (jsonTask == null) {
+					throw new AbortException("Couldn't fetch newly created Kanboard task");
+				} else {
+					columnId = (String) jsonTask.get(Kanboard.COLUMN_ID);
+					colPosition = Kanboard.getColPositionFromColumnId(columnId, projectColumns);
+					swimlaneId = (String) jsonTask.get(Kanboard.SWIMLANE_ID);
 				}
 
 			}
 
-			if (newOwnerId != null) {
+			if (!newTask && ownerChanged) {
 
-				// Construct new updateTask request
-				method = "updateTask";
-				params = new HashMap<String, Object>();
-				params.put("id", taskId);
-
-				if (newOwnerId != null) {
-					params.put("owner_id", newOwnerId);
-				}
-
-				request = new JSONRPC2Request(method, params, requestID);
-				listener.getLogger().println(request.toJSONString());
-
-				// Send request
-				response = session.send(request);
-				listener.getLogger().println(response.toJSONString());
-				listener.getLogger().println("----------");
-
-				// Print response result / error
-				if (response.indicatesSuccess()) {
+				if (Kanboard.updateTask(session, listener, taskId, newOwnerId)) {
 					listener.getLogger()
 							.println("Owner of task " + taskRefValue + " successfully set to " + taskOwnerValue + ".");
-				} else {
-					listener.getLogger().println(response.getError().getMessage());
-					throw new AbortException(response.getError().getMessage());
+				}
+
+			}
+
+			if (!newTask && (columnChanged || swimlaneChanged)) {
+
+				if (Kanboard.moveTaskPosition(session, listener, Integer.valueOf(projectId), Integer.valueOf(taskId),
+						(newColumnId == null) ? Integer.valueOf(columnId) : Integer.valueOf(newColumnId),
+						(newColPosition == null) ? colPosition : newColPosition,
+						(newSwimlaneId == null) ? Integer.valueOf(swimlaneId) : Integer.valueOf(newSwimlaneId))) {
+					listener.getLogger()
+							.println("Task " + taskRefValue + " successfully moved to column " + newColPosition + ".");
 				}
 
 			}
 
 			if (ArrayUtils.isNotEmpty(taskAttachmentsValue)) {
 
-				// Construct new getAllTaskFiles request
-				method = "getAllTaskFiles";
-				params = new HashMap<String, Object>();
-				params.put("task_id", Integer.valueOf(taskId));
-
-				request = new JSONRPC2Request(method, params, requestID);
-				listener.getLogger().println(request.toJSONString());
-
-				// Send request
-				response = session.send(request);
-				listener.getLogger().println(response.toJSONString());
-				listener.getLogger().println("----------");
+				JSONArray jsonFiles = Kanboard.getAllTaskFiles(session, listener, Integer.valueOf(taskId));
 
 				Map<String, JSONObject> existingFiles = new HashMap<String, JSONObject>();
 
-				// Print response result / error
-				if (response.indicatesSuccess()) {
-					if (response.getResult() != null) {
-						JSONArray jsonResult = (JSONArray) response.getResult();
-						for (int i = 0; i < jsonResult.size(); i++) {
-							JSONObject jsonFile = (JSONObject) jsonResult.get(i);
-							String name = (String) jsonFile.get("name");
-							existingFiles.put(name, jsonFile);
-						}
+				if (jsonFiles != null) {
+					for (int i = 0; i < jsonFiles.size(); i++) {
+						JSONObject jsonFile = (JSONObject) jsonFiles.get(i);
+						String name = (String) jsonFile.get(Kanboard.NAME);
+						existingFiles.put(name, jsonFile);
 					}
-				} else {
-					listener.getLogger().println(response.getError().getMessage());
-					throw new AbortException(response.getError().getMessage());
 				}
 
 				for (int i = 0; i < taskAttachmentsValue.length; i++) {
@@ -543,62 +378,21 @@ public class KanboardTaskPublisher extends Notifier {
 						if (existingFiles.containsKey(filename)) {
 
 							JSONObject jsonFile = existingFiles.get(filename);
-							String fileId = (String) jsonFile.get("id");
+							String fileId = (String) jsonFile.get(Kanboard.ID);
 
-							// Construct new removeTaskFile request
-							method = "removeTaskFile";
-							params = new HashMap<String, Object>();
-							params.put("file_id", Integer.valueOf(fileId));
-
-							request = new JSONRPC2Request(method, params, requestID);
-							listener.getLogger().println(request.toJSONString());
-
-							// Send request
-							response = session.send(request);
-							listener.getLogger().println(response.toJSONString());
-							listener.getLogger().println("----------");
-
-							// Print response result / error
-							if (response.indicatesSuccess()) {
+							if (Kanboard.removeTaskFile(session, listener, Integer.valueOf(fileId))) {
 								listener.getLogger().println("Existing file " + filename
 										+ " successfully removed from task " + taskRefValue + ".");
-							} else {
-								listener.getLogger().println(response.getError().getMessage());
-								throw new AbortException(response.getError().getMessage());
 							}
+
 						}
 
 						String encodedFile = Utils.encodeFileToBase64Binary(file);
 
-						// Construct new createTaskFile request
-						method = "createTaskFile";
-						params = new HashMap<String, Object>();
-						params.put("task_id", Integer.valueOf(taskId));
-						params.put("project_id", Integer.valueOf(projectId));
-
-						params.put("filename", filename);
-						params.put("blob", encodedFile);
-
-						if (creatorId != null) {
-							// params.put("creator_id",
-							// Integer.valueOf(creatorId));
-						}
-
-						request = new JSONRPC2Request(method, params, requestID);
-						listener.getLogger().println(request.toJSONString());
-
-						// Send request
-						response = session.send(request);
-						listener.getLogger().println(response.toJSONString());
-						listener.getLogger().println("----------");
-
-						// Print response result / error
-						if (response.indicatesSuccess()) {
+						if (Kanboard.createTaskFile(session, listener, Integer.valueOf(projectId),
+								Integer.valueOf(taskId), filename, encodedFile, creatorId)) {
 							listener.getLogger()
 									.println("File " + path + " successfully added to task " + taskRefValue + ".");
-						} else {
-							listener.getLogger().println(response.getError().getMessage());
-							throw new AbortException(response.getError().getMessage());
 						}
 
 					} catch (IOException e) {
@@ -612,34 +406,16 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (ArrayUtils.isNotEmpty(taskExternalLinksValue)) {
 
-				// Construct new getAllExternalTaskLinks request
-				method = "getAllExternalTaskLinks";
-				params = new HashMap<String, Object>();
-				params.put("task_id", Integer.valueOf(taskId));
-
-				request = new JSONRPC2Request(method, params, requestID);
-				listener.getLogger().println(request.toJSONString());
-
-				// Send request
-				response = session.send(request);
-				listener.getLogger().println(response.toJSONString());
-				listener.getLogger().println("----------");
+				JSONArray jsonLinks = Kanboard.getAllExternalTaskLinks(session, listener, Integer.valueOf(taskId));
 
 				Map<String, JSONObject> existingLinks = new HashMap<String, JSONObject>();
 
-				// Print response result / error
-				if (response.indicatesSuccess()) {
-					if (response.getResult() != null) {
-						JSONArray jsonResult = (JSONArray) response.getResult();
-						for (int i = 0; i < jsonResult.size(); i++) {
-							JSONObject jsonLink = (JSONObject) jsonResult.get(i);
-							String url = (String) jsonLink.get("url");
-							existingLinks.put(url, jsonLink);
-						}
+				if (jsonLinks != null) {
+					for (int i = 0; i < jsonLinks.size(); i++) {
+						JSONObject jsonLink = (JSONObject) jsonLinks.get(i);
+						String url = (String) jsonLink.get(Kanboard.URL);
+						existingLinks.put(url, jsonLink);
 					}
-				} else {
-					listener.getLogger().println(response.getError().getMessage());
-					throw new AbortException(response.getError().getMessage());
 				}
 
 				for (int i = 0; i < taskExternalLinksValue.length; i++) {
@@ -652,33 +428,10 @@ public class KanboardTaskPublisher extends Notifier {
 
 					try {
 
-						// Construct new createExternalTaskLink request
-						method = "createExternalTaskLink";
-						params = new HashMap<String, Object>();
-						params.put("task_id", Integer.valueOf(taskId));
-						params.put("url", url);
-						params.put("dependency", "related");
-						params.put("type", "weblink");
-
-						if (creatorId != null) {
-							params.put("creator_id", Integer.valueOf(creatorId));
-						}
-
-						request = new JSONRPC2Request(method, params, requestID);
-						listener.getLogger().println(request.toJSONString());
-
-						// Send request
-						response = session.send(request);
-						listener.getLogger().println(response.toJSONString());
-						listener.getLogger().println("----------");
-
-						// Print response result / error
-						if (response.indicatesSuccess()) {
+						if (Kanboard.createExternalTaskLink(session, listener, Integer.valueOf(taskId), url,
+								creatorId)) {
 							listener.getLogger()
 									.println("Link " + url + " successfully added to task " + taskRefValue + ".");
-						} else {
-							listener.getLogger().println(response.getError().getMessage());
-							throw new AbortException(response.getError().getMessage());
 						}
 
 					} catch (IOException e) {
@@ -690,7 +443,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 			}
 
-		} catch (JSONRPC2SessionException | IOException | InterruptedException e) {
+		} catch (JSONRPC2SessionException | IOException | InterruptedException | MacroEvaluationException e) {
 
 			listener.getLogger().println(e.getMessage());
 			throw new AbortException(e.getMessage());
@@ -789,6 +542,27 @@ public class KanboardTaskPublisher extends Notifier {
 			return super.configure(req, formData);
 		}
 
+		public ListBoxModel doFillTaskColorItems() {
+			ListBoxModel items = new ListBoxModel();
+			items.add("Default", "");
+			items.add("Yellow", "yellow");
+			items.add("Blue", "blue");
+			items.add("Green", "green");
+			items.add("Purple", "purple");
+			items.add("Red", "red");
+			items.add("Orage", "orange");
+			items.add("Grey", "grey");
+			items.add("Brown", "brown");
+			items.add("Deep orange", "deep_orange");
+			items.add("Dark grey", "dark_grey");
+			items.add("Pink", "pink");
+			items.add("Teal", "teal");
+			items.add("Cyan", "cyan");
+			items.add("Lime", "lime");
+			items.add("Light green", "light_green");
+			items.add("Amber", "amber");
+			return items;
+		}
 	}
 
 }
