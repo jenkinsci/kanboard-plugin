@@ -59,6 +59,7 @@ public class KanboardTaskPublisher extends Notifier {
 	private String taskExternalLinks;
 	private String taskSwimlane;
 	private String taskColor;
+	private String taskComment;
 
 	@DataBoundConstructor
 	public KanboardTaskPublisher(String projectIdentifier, String taskReference) {
@@ -114,6 +115,10 @@ public class KanboardTaskPublisher extends Notifier {
 		return taskColor;
 	}
 
+	public String getTaskComment() {
+		return taskComment;
+	}
+
 	@DataBoundSetter
 	public void setSuccessfulBuildOnly(boolean successfulBuildOnly) {
 		this.successfulBuildOnly = successfulBuildOnly;
@@ -164,6 +169,11 @@ public class KanboardTaskPublisher extends Notifier {
 		this.taskColor = taskColor;
 	}
 
+	@DataBoundSetter
+	public void setTaskComment(String taskComment) {
+		this.taskComment = taskComment;
+	}
+
 	@Override
 	public BuildStepMonitor getRequiredMonitorService() {
 		return BuildStepMonitor.BUILD;
@@ -200,6 +210,7 @@ public class KanboardTaskPublisher extends Notifier {
 			String taskCreatorValue = TokenMacro.expandAll(build, listener, this.taskCreator);
 			String taskSwimlaneValue = TokenMacro.expandAll(build, listener, this.taskSwimlane);
 			String taskColorValue = TokenMacro.expandAll(build, listener, this.taskColor);
+			String taskCommentValue = TokenMacro.expandAll(build, listener, this.taskComment);
 
 			String[] taskAttachmentsValue = Kanboard.getTaskAttachemntsValue(build, listener, this.taskAttachments);
 
@@ -439,6 +450,17 @@ public class KanboardTaskPublisher extends Notifier {
 						listener.getLogger().println(e.getMessage());
 
 					}
+				}
+
+			}
+
+			if (StringUtils.isNotBlank(taskCommentValue)) {
+
+				Object createResult = Kanboard.createComment(session, listener, Integer.valueOf(taskId), creatorId,
+						taskCommentValue);
+				if (!createResult.equals(Boolean.FALSE)) {
+					listener.getLogger()
+							.println("Comment " + createResult + " successfully added to task " + taskRefValue + ".");
 				}
 
 			}

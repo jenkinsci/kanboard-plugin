@@ -38,6 +38,7 @@ public class Kanboard {
 	private static final String TYPE_WEBLINK = "weblink";
 	private static final String USERNAME = "username";
 
+	private static final String CREATE_COMMENT = "createComment";
 	private static final String CREATE_EXTERNAL_TASK_LINK = "createExternalTaskLink";
 	private static final String CREATE_TASK = "createTask";
 	private static final String CREATE_TASK_FILE = "createTaskFile";
@@ -53,12 +54,44 @@ public class Kanboard {
 	private static final String UPDATE_TASK = "updateTask";
 
 	static final String COLUMN_ID = "column_id";
+	static final String CONTENT = "content";
 	static final String ID = "id";
 	static final String NAME = "name";
 	static final String OWNER_ID = "owner_id";
 	static final String POSITION = "position";
 	static final String SWIMLANE_ID = "swimlane_id";
 	static final String URL = "url";
+	static final String USER_ID = "user_id";
+
+	public static Object createComment(JSONRPC2Session session, TaskListener listener, Integer taskId, String userId,
+			String content) throws JSONRPC2SessionException, AbortException {
+
+		// Construct new createComment request
+		String method = CREATE_COMMENT;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+		params.put(TASK_ID, taskId);
+		params.put(CONTENT, content);
+
+		if (StringUtils.isNotBlank(userId)) {
+			params.put(USER_ID, Integer.valueOf(userId));
+		}
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		listener.getLogger().println(request.toJSONString());
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		listener.getLogger().println(response.toJSONString());
+		listener.getLogger().println(Utils.LOG_SEPARATOR);
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return response.getResult();
+		} else {
+			listener.getLogger().println(response.getError().getMessage());
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
 
 	public static boolean createExternalTaskLink(JSONRPC2Session session, TaskListener listener, Integer taskId,
 			String url, String creatorId) throws JSONRPC2SessionException, AbortException {
