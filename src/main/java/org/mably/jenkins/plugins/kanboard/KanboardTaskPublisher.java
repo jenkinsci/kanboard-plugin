@@ -572,7 +572,7 @@ public class KanboardTaskPublisher extends Notifier {
 			items.add("Green", "green");
 			items.add("Purple", "purple");
 			items.add("Red", "red");
-			items.add("Orage", "orange");
+			items.add("Orange", "orange");
 			items.add("Grey", "grey");
 			items.add("Brown", "brown");
 			items.add("Deep orange", "deep_orange");
