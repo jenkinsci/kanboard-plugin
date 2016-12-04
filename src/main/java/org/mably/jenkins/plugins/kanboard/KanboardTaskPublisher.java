@@ -60,6 +60,7 @@ public class KanboardTaskPublisher extends Notifier {
 	private String taskSwimlane;
 	private String taskColor;
 	private String taskComment;
+	private String taskSubtaskTitle;
 
 	@DataBoundConstructor
 	public KanboardTaskPublisher(String projectIdentifier, String taskReference) {
@@ -119,6 +120,10 @@ public class KanboardTaskPublisher extends Notifier {
 		return taskComment;
 	}
 
+	public String getTaskSubtaskTitle() {
+		return taskSubtaskTitle;
+	}
+
 	@DataBoundSetter
 	public void setSuccessfulBuildOnly(boolean successfulBuildOnly) {
 		this.successfulBuildOnly = successfulBuildOnly;
@@ -174,6 +179,11 @@ public class KanboardTaskPublisher extends Notifier {
 		this.taskComment = taskComment;
 	}
 
+	@DataBoundSetter
+	public void setTaskSubtaskTitle(String taskSubtaskTitle) {
+		this.taskSubtaskTitle = taskSubtaskTitle;
+	}
+
 	@Override
 	public BuildStepMonitor getRequiredMonitorService() {
 		return BuildStepMonitor.BUILD;
@@ -211,6 +221,7 @@ public class KanboardTaskPublisher extends Notifier {
 			String taskSwimlaneValue = TokenMacro.expandAll(build, listener, this.taskSwimlane);
 			String taskColorValue = TokenMacro.expandAll(build, listener, this.taskColor);
 			String taskCommentValue = TokenMacro.expandAll(build, listener, this.taskComment);
+			String taskSubtaskTitleValue = TokenMacro.expandAll(build, listener, this.taskSubtaskTitle);
 
 			String[] taskAttachmentsValue = Kanboard.getTaskAttachemntsValue(build, listener, this.taskAttachments);
 
@@ -330,6 +341,7 @@ public class KanboardTaskPublisher extends Notifier {
 				if (jsonTask == null) {
 					throw new AbortException("Couldn't fetch newly created Kanboard task");
 				} else {
+					ownerId = (String) jsonTask.get(Kanboard.OWNER_ID);
 					columnId = (String) jsonTask.get(Kanboard.COLUMN_ID);
 					colPosition = Kanboard.getColPositionFromColumnId(columnId, projectColumns);
 					swimlaneId = (String) jsonTask.get(Kanboard.SWIMLANE_ID);
@@ -461,6 +473,46 @@ public class KanboardTaskPublisher extends Notifier {
 				if (!createResult.equals(Boolean.FALSE)) {
 					listener.getLogger()
 							.println("Comment " + createResult + " successfully added to task " + taskRefValue + ".");
+				}
+
+			}
+
+			if (StringUtils.isNotBlank(taskSubtaskTitleValue)) {
+
+				Object jsonSubtasksResult = Kanboard.getAllSubtasks(session, listener, Integer.valueOf(taskId));
+
+				Map<String, JSONObject> existingSubtasks = new HashMap<String, JSONObject>();
+
+				if (jsonSubtasksResult instanceof JSONArray) {
+					JSONArray jsonSubtasks = (JSONArray) jsonSubtasksResult;
+					for (int i = 0; i < jsonSubtasks.size(); i++) {
+						JSONObject jsonSubtask = (JSONObject) jsonSubtasks.get(i);
+						String title = (String) jsonSubtask.get(Kanboard.TITLE);
+						String userId = (String) jsonSubtask.get(Kanboard.USER_ID);
+						String key = title + "|" + userId;
+						existingSubtasks.put(key, jsonSubtask);
+					}
+				}
+
+				String key = taskSubtaskTitleValue + "|" + ownerId;
+
+				if (!existingSubtasks.containsKey(key)) {
+
+					try {
+
+						Object createResult = Kanboard.createSubtask(session, listener, Integer.valueOf(taskId),
+								ownerId, taskSubtaskTitleValue);
+						if (!createResult.equals(Boolean.FALSE)) {
+							listener.getLogger().println(
+									"Subtask " + createResult + " successfully added to task " + taskRefValue + ".");
+						}
+
+					} catch (IOException e) {
+
+						listener.getLogger().println(e.getMessage());
+
+					}
+
 				}
 
 			}

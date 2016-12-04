@@ -44,5 +44,9 @@
     <f:entry title="Comment (optional)" field="taskComment">
       <f:textarea />
     </f:entry>    
+    <f:entry title="Subtask title (optional)" field="taskSubtaskTitle"
+      description="Title of the subtask.">
+      <f:textbox />
+    </f:entry>
   </f:advanced>
 </j:jelly>

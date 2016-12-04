@@ -33,16 +33,17 @@ public class Kanboard {
 	private static final String PROJECT_ID = "project_id";
 	private static final String REFERENCE = "reference";
 	private static final String TASK_ID = "task_id";
-	private static final String TITLE = "title";
 	private static final String TYPE = "type";
 	private static final String TYPE_WEBLINK = "weblink";
 	private static final String USERNAME = "username";
 
 	private static final String CREATE_COMMENT = "createComment";
 	private static final String CREATE_EXTERNAL_TASK_LINK = "createExternalTaskLink";
+	private static final String CREATE_SUBTASK = "createSubtask";
 	private static final String CREATE_TASK = "createTask";
 	private static final String CREATE_TASK_FILE = "createTaskFile";
 	private static final String GET_ALL_EXTERNAL_TASK_LINKS = "getAllExternalTaskLinks";
+	private static final String GET_ALL_SUBTASKS = "getAllSubtasks";
 	private static final String GET_ALL_TASK_FILES = "getAllTaskFiles";
 	private static final String GET_COLUMNS = "getColumns";
 	private static final String GET_PROJECT_BY_IDENTIFIER = "getProjectByIdentifier";
@@ -60,6 +61,7 @@ public class Kanboard {
 	static final String OWNER_ID = "owner_id";
 	static final String POSITION = "position";
 	static final String SWIMLANE_ID = "swimlane_id";
+	static final String TITLE = "title";
 	static final String URL = "url";
 	static final String USER_ID = "user_id";
 
@@ -119,6 +121,36 @@ public class Kanboard {
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return true;
+		} else {
+			listener.getLogger().println(response.getError().getMessage());
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
+
+	public static Object createSubtask(JSONRPC2Session session, TaskListener listener, Integer taskId, String userId,
+			String title) throws JSONRPC2SessionException, AbortException {
+
+		// Construct new createSubtask request
+		String method = CREATE_SUBTASK;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+		params.put(TASK_ID, taskId);
+		params.put(TITLE, title);
+
+		if (StringUtils.isNotBlank(userId)) {
+			params.put(USER_ID, Integer.valueOf(userId));
+		}
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		listener.getLogger().println(request.toJSONString());
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		listener.getLogger().println(response.toJSONString());
+		listener.getLogger().println(Utils.LOG_SEPARATOR);
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return response.getResult();
 		} else {
 			listener.getLogger().println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
@@ -195,11 +227,6 @@ public class Kanboard {
 		params.put(FILENAME, filename);
 		params.put(BLOB, encodedFile);
 
-		if (StringUtils.isNotBlank(creatorId)) {
-			// params.put("creator_id",
-			// Integer.valueOf(creatorId));
-		}
-
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		listener.getLogger().println(request.toJSONString());
 
@@ -236,6 +263,31 @@ public class Kanboard {
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return (JSONArray) response.getResult();
+		} else {
+			listener.getLogger().println(response.getError().getMessage());
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
+
+	public static Object getAllSubtasks(JSONRPC2Session session, TaskListener listener, Integer taskId)
+			throws AbortException, JSONRPC2SessionException {
+
+		// Construct new getAllSubtasks request
+		String method = GET_ALL_SUBTASKS;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+		params.put(TASK_ID, taskId);
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		listener.getLogger().println(request.toJSONString());
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		listener.getLogger().println(response.toJSONString());
+		listener.getLogger().println(Utils.LOG_SEPARATOR);
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return response.getResult();
 		} else {
 			listener.getLogger().println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
