@@ -12,18 +12,30 @@ import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 
+import com.cloudbees.plugins.credentials.CredentialsMatcher;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.thetransactioncompany.jsonrpc2.client.ConnectionConfigurator;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
 
 import hudson.ProxyConfiguration;
+import hudson.security.ACL;
 import jenkins.model.Jenkins;
 
 public class Utils {
+
+	private static final Logger logger = Logger.getLogger(Utils.class.getName());
 
 	static final String LOG_SEPARATOR = "----------";
 
@@ -65,22 +77,25 @@ public class Utils {
 		Jenkins jenkins = Jenkins.getInstance();
 		if (jenkins != null) {
 			ProxyConfiguration proxyConfig = jenkins.proxy;
-			if ((proxyConfig != null) && (!proxyConfig.name.isEmpty())
-					&& !proxyConfig.noProxyHost.contains(url.getHost())) {
+			if ((proxyConfig != null) && StringUtils.isNotBlank(proxyConfig.name)
+					&& (StringUtils.isBlank(proxyConfig.noProxyHost)
+							|| !proxyConfig.noProxyHost.contains(url.getHost()))) {
 				proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyConfig.name, proxyConfig.port));
 			}
 		}
 		return proxy;
 	}
 
-	public static JSONRPC2Session initJSONRPCSession(String endpoint, String apiToken) throws MalformedURLException {
+	public static JSONRPC2Session initJSONRPCSession(String endpoint, String apiToken, String apiTokenCredentialId)
+			throws MalformedURLException {
 
 		// The JSON-RPC 2.0 server URL
 		URL serverURL = new URL(endpoint);
 
 		// Create new JSON-RPC 2.0 client session
 		JSONRPC2Session session = new JSONRPC2Session(serverURL);
-		session.setConnectionConfigurator(new Utils.ApiAuthenticator(apiToken));
+		String token = getTokenToUse(apiTokenCredentialId, apiToken);
+		session.setConnectionConfigurator(new Utils.ApiAuthenticator(token));
 
 		Proxy proxy = getJenkinsProxy(serverURL);
 		if (proxy != null) {
@@ -124,6 +139,25 @@ public class Utils {
 		byte[] bytes = FileUtils.readFileToByteArray(file);
 		byte[] encoded = Base64.encodeBase64(bytes);
 		return new String(encoded, Charset.defaultCharset());
+	}
+
+	private static String getTokenToUse(String apiTokenCredentialId, String apiToken) {
+		String token = apiToken;
+		if (apiTokenCredentialId != null && !apiTokenCredentialId.isEmpty()) {
+			StringCredentials credentials = lookupCredentials(apiTokenCredentialId);
+			if (credentials != null) {
+				logger.fine("Using Integration Token Credential ID.");
+				token = credentials.getSecret().getPlainText();
+			}
+		}
+		return token;
+	}
+
+	private static StringCredentials lookupCredentials(String credentialId) {
+		List<StringCredentials> credentials = CredentialsProvider.lookupCredentials(StringCredentials.class,
+				Jenkins.getInstance(), ACL.SYSTEM, Collections.<DomainRequirement> emptyList());
+		CredentialsMatcher matcher = CredentialsMatchers.withId(credentialId);
+		return CredentialsMatchers.firstOrNull(credentials, matcher);
 	}
 
 }

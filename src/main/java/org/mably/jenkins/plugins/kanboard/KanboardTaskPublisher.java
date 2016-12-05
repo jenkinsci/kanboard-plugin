@@ -1,5 +1,7 @@
 package org.mably.jenkins.plugins.kanboard;
 
+import static com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -10,6 +12,7 @@ import javax.servlet.ServletException;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -17,6 +20,8 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
@@ -30,12 +35,14 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.TaskListener;
+import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 
@@ -232,7 +239,7 @@ public class KanboardTaskPublisher extends Notifier {
 					+ " for project " + projectIdentifierValue + " and task " + taskRefValue + "!");
 
 			JSONRPC2Session session = Utils.initJSONRPCSession(getDescriptor().getEndpoint(),
-					getDescriptor().getApiToken());
+					getDescriptor().getApiToken(), getDescriptor().getApiTokenCredentialId());
 
 			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, listener, projectIdentifierValue);
 			String projectId = (String) jsonProject.get(Kanboard.ID);
@@ -537,6 +544,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 		private String endpoint;
 		private String apiToken;
+		private String apiTokenCredentialId;
 
 		/**
 		 * In order to load the persisted global configuration, you have to call
@@ -558,6 +566,10 @@ public class KanboardTaskPublisher extends Notifier {
 		 */
 		public String getApiToken() {
 			return apiToken;
+		}
+
+		public String getApiTokenCredentialId() {
+			return apiTokenCredentialId;
 		}
 
 		@Override
@@ -587,11 +599,13 @@ public class KanboardTaskPublisher extends Notifier {
 		}
 
 		public FormValidation doTestConnection(@QueryParameter("endpoint") final String endpoint,
-				@QueryParameter("apiToken") final String apiToken) throws IOException, ServletException {
+				@QueryParameter("apiToken") final String apiToken,
+				@QueryParameter("apiTokenCredentialId") final String apiTokenCredentialId)
+				throws IOException, ServletException {
 			if (StringUtils.isNotBlank(endpoint) && Utils.checkJSONRPCEndpoint(endpoint)
-					&& StringUtils.isNotBlank(apiToken)) {
+					&& (StringUtils.isNotBlank(apiToken) || StringUtils.isNotBlank(apiTokenCredentialId))) {
 				try {
-					JSONRPC2Session session = Utils.initJSONRPCSession(endpoint, apiToken);
+					JSONRPC2Session session = Utils.initJSONRPCSession(endpoint, apiToken, apiTokenCredentialId);
 					JSONRPC2Request request = new JSONRPC2Request("getVersion", 0);
 					JSONRPC2Response response = session.send(request);
 					if (response.indicatesSuccess()) {
@@ -612,8 +626,18 @@ public class KanboardTaskPublisher extends Notifier {
 		public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
 			endpoint = formData.getString("endpoint");
 			apiToken = formData.getString("apiToken");
+			apiTokenCredentialId = formData.getString("apiTokenCredentialId");
 			save();
 			return super.configure(req, formData);
+		}
+
+		public ListBoxModel doFillApiTokenCredentialIdItems(@QueryParameter final String endpoint) {
+			Jenkins jenkins = Jenkins.getInstance();
+			if ((jenkins != null) && !jenkins.hasPermission(Jenkins.ADMINISTER)) {
+				return new ListBoxModel();
+			}
+			return new StandardListBoxModel().withEmptySelection().withAll(lookupCredentials(StringCredentials.class,
+					jenkins, ACL.SYSTEM, URIRequirementBuilder.fromUri(endpoint).build()));
 		}
 
 		public ListBoxModel doFillTaskColorItems() {
