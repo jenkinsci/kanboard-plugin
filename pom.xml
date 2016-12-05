@@ -10,14 +10,13 @@
     <relativePath/>
   </parent>
 
-  <groupId>org.mably.jenkins.plugins</groupId>
   <artifactId>kanboard-publisher</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Kanboard Publisher</name>
   <description>A Jenkins plugin that allows to create or update a Kanboard task as a post-build action.</description>
-  <url>https://wiki.jenkins-ci.org/display/JENKINS/Kanboard+Publisher</url>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/Kanboard+Publisher+Plugin</url>
 
   <properties>
     <!-- Baseline Jenkins version you use to build the plugin. Users must have this version or newer to run. -->
@@ -52,13 +51,13 @@
     </developer>
   </developers>
 
-  <!-- Assuming you want to host on @jenkinsci:
+  <!-- Assuming you want to host on @jenkinsci: -->
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/${project.artifactId}-plugin</url>
+    <connection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+    <developerConnection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
   </scm>
-   -->
+
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
