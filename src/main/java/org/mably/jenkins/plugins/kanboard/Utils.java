@@ -29,7 +29,10 @@ import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import com.thetransactioncompany.jsonrpc2.client.ConnectionConfigurator;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
 
+import hudson.EnvVars;
 import hudson.ProxyConfiguration;
+import hudson.model.AbstractBuild;
+import hudson.model.EnvironmentContributingAction;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
 
@@ -139,6 +142,30 @@ public class Utils {
 		byte[] bytes = FileUtils.readFileToByteArray(file);
 		byte[] encoded = Base64.encodeBase64(bytes);
 		return new String(encoded, Charset.defaultCharset());
+	}
+
+	public static void exportEnvironmentVariable(AbstractBuild<?, ?> build, final String name, final String value) {
+
+		build.addAction(new EnvironmentContributingAction() {
+
+			public void buildEnvVars(AbstractBuild<?, ?> build, EnvVars envVars) {
+				if (envVars != null) {
+					envVars.put(name, value);
+				}
+			}
+
+			public String getUrlName() {
+				return null;
+			}
+
+			public String getIconFileName() {
+				return null;
+			}
+
+			public String getDisplayName() {
+				return null;
+			}
+		});
 	}
 
 	private static String getTokenToUse(String apiTokenCredentialId, String apiToken) {

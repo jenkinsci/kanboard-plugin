@@ -53,6 +53,8 @@ import net.minidev.json.JSONObject;
  */
 public class KanboardTaskPublisher extends Notifier {
 
+	static final String KANBOARD_TASKURL_ENVVAR = "KANBOARD_TASKURL";
+
 	private final String projectIdentifier;
 	private final String taskReference;
 
@@ -253,18 +255,21 @@ public class KanboardTaskPublisher extends Notifier {
 			String columnId;
 			Integer colPosition;
 			String swimlaneId;
+			String taskURL;
 			if (jsonTask == null) {
 				taskId = null;
 				ownerId = null;
 				columnId = null;
 				colPosition = 0; // required by newColPosition calculation
 				swimlaneId = null;
+				taskURL = null;
 			} else {
 				taskId = (String) jsonTask.get(Kanboard.ID);
 				ownerId = (String) jsonTask.get(Kanboard.OWNER_ID);
 				columnId = (String) jsonTask.get(Kanboard.COLUMN_ID);
 				colPosition = Kanboard.getColPositionFromColumnId(columnId, projectColumns);
 				swimlaneId = (String) jsonTask.get(Kanboard.SWIMLANE_ID);
+				taskURL = (String) jsonTask.get(Kanboard.URL);
 			}
 
 			boolean columnChanged = false;
@@ -352,6 +357,7 @@ public class KanboardTaskPublisher extends Notifier {
 					columnId = (String) jsonTask.get(Kanboard.COLUMN_ID);
 					colPosition = Kanboard.getColPositionFromColumnId(columnId, projectColumns);
 					swimlaneId = (String) jsonTask.get(Kanboard.SWIMLANE_ID);
+					taskURL = (String) jsonTask.get(Kanboard.URL);
 				}
 
 			}
@@ -520,6 +526,11 @@ public class KanboardTaskPublisher extends Notifier {
 
 					}
 
+				}
+
+				// Export task URL environment variable
+				if (StringUtils.isNotBlank(taskURL)) {
+					Utils.exportEnvironmentVariable(build, KANBOARD_TASKURL_ENVVAR, taskURL);
 				}
 
 			}
