@@ -217,6 +217,8 @@ public class KanboardTaskPublisher extends Notifier {
 
 		try {
 
+			final boolean debugMode = getDescriptor().isDebugMode();
+
 			String projectIdentifierValue = TokenMacro.expandAll(build, listener, this.projectIdentifier);
 			String taskRefValue = TokenMacro.expandAll(build, listener, this.taskReference);
 
@@ -237,18 +239,24 @@ public class KanboardTaskPublisher extends Notifier {
 			String[] taskExternalLinksValue = Kanboard.getTaskExternalLinksValue(build, listener,
 					this.taskExternalLinks);
 
-			listener.getLogger().println("Running Kanboard Task Publisher on " + getDescriptor().getEndpoint()
-					+ " for project " + projectIdentifierValue + " and task " + taskRefValue + "!");
+			listener.getLogger()
+					.println("Running Kanboard Task Publisher Plugin " + Utils.getImplementationVersion() + " on "
+							+ getDescriptor().getEndpoint() + " for project " + projectIdentifierValue + " and task "
+							+ taskRefValue + "!");
 
 			JSONRPC2Session session = Utils.initJSONRPCSession(getDescriptor().getEndpoint(),
 					getDescriptor().getApiToken(), getDescriptor().getApiTokenCredentialId());
 
-			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, listener, projectIdentifierValue);
+			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, listener, projectIdentifierValue,
+					debugMode);
+			if (jsonProject == null) {
+				throw new AbortException("Couldn't find Kanboard project " + projectIdentifierValue);
+			}
 			String projectId = (String) jsonProject.get(Kanboard.ID);
 
-			JSONArray projectColumns = Kanboard.getProjectColumns(session, listener, projectId);
+			JSONArray projectColumns = Kanboard.getProjectColumns(session, listener, projectId, debugMode);
 
-			JSONObject jsonTask = Kanboard.getTaskByReference(session, listener, projectId, taskRefValue);
+			JSONObject jsonTask = Kanboard.getTaskByReference(session, listener, projectId, taskRefValue, debugMode);
 
 			String taskId;
 			String ownerId;
@@ -312,7 +320,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 			String creatorId = null;
 			if (StringUtils.isNotEmpty(taskCreatorValue)) {
-				JSONObject jsonCreator = Kanboard.getUserByName(session, listener, taskCreatorValue);
+				JSONObject jsonCreator = Kanboard.getUserByName(session, listener, taskCreatorValue, debugMode);
 				if (jsonCreator != null) {
 					creatorId = (String) jsonCreator.get(Kanboard.ID);
 				}
@@ -324,7 +332,7 @@ public class KanboardTaskPublisher extends Notifier {
 				if ((creatorId != null) && (taskOwnerValue.equals(taskCreatorValue))) {
 					newOwnerId = creatorId;
 				} else {
-					JSONObject jsonOwner = Kanboard.getUserByName(session, listener, taskOwnerValue);
+					JSONObject jsonOwner = Kanboard.getUserByName(session, listener, taskOwnerValue, debugMode);
 					if (jsonOwner != null) {
 						newOwnerId = (String) jsonOwner.get(Kanboard.ID);
 					}
@@ -340,7 +348,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 				Object createResult = Kanboard.createTask(session, listener, projectId, taskRefValue, creatorId,
 						((newOwnerId == null) ? creatorId : newOwnerId), taskTitleValue, taskDescValue, newColumnId,
-						newSwimlaneId, taskColorValue);
+						newSwimlaneId, taskColorValue, debugMode);
 
 				if (createResult.equals(Boolean.FALSE)) {
 					throw new AbortException("Couldn't create Kanboard task");
@@ -348,7 +356,7 @@ public class KanboardTaskPublisher extends Notifier {
 					taskId = String.valueOf(createResult);
 				}
 
-				jsonTask = Kanboard.getTask(session, listener, taskId);
+				jsonTask = Kanboard.getTask(session, listener, taskId, debugMode);
 
 				if (jsonTask == null) {
 					throw new AbortException("Couldn't fetch newly created Kanboard task");
@@ -364,7 +372,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (!newTask && ownerChanged) {
 
-				if (Kanboard.updateTask(session, listener, taskId, newOwnerId)) {
+				if (Kanboard.updateTask(session, listener, taskId, newOwnerId, debugMode)) {
 					listener.getLogger()
 							.println("Owner of task " + taskRefValue + " successfully set to " + taskOwnerValue + ".");
 				}
@@ -376,7 +384,8 @@ public class KanboardTaskPublisher extends Notifier {
 				if (Kanboard.moveTaskPosition(session, listener, Integer.valueOf(projectId), Integer.valueOf(taskId),
 						(newColumnId == null) ? Integer.valueOf(columnId) : Integer.valueOf(newColumnId),
 						(newColPosition == null) ? colPosition : newColPosition,
-						(newSwimlaneId == null) ? Integer.valueOf(swimlaneId) : Integer.valueOf(newSwimlaneId))) {
+						(newSwimlaneId == null) ? Integer.valueOf(swimlaneId) : Integer.valueOf(newSwimlaneId),
+						debugMode)) {
 					listener.getLogger()
 							.println("Task " + taskRefValue + " successfully moved to column " + newColPosition + ".");
 				}
@@ -385,7 +394,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (ArrayUtils.isNotEmpty(taskAttachmentsValue)) {
 
-				JSONArray jsonFiles = Kanboard.getAllTaskFiles(session, listener, Integer.valueOf(taskId));
+				JSONArray jsonFiles = Kanboard.getAllTaskFiles(session, listener, Integer.valueOf(taskId), debugMode);
 
 				Map<String, JSONObject> existingFiles = new HashMap<String, JSONObject>();
 
@@ -416,7 +425,7 @@ public class KanboardTaskPublisher extends Notifier {
 							JSONObject jsonFile = existingFiles.get(filename);
 							String fileId = (String) jsonFile.get(Kanboard.ID);
 
-							if (Kanboard.removeTaskFile(session, listener, Integer.valueOf(fileId))) {
+							if (Kanboard.removeTaskFile(session, listener, Integer.valueOf(fileId), debugMode)) {
 								listener.getLogger().println("Existing file " + filename
 										+ " successfully removed from task " + taskRefValue + ".");
 							}
@@ -426,7 +435,7 @@ public class KanboardTaskPublisher extends Notifier {
 						String encodedFile = Utils.encodeFileToBase64Binary(file);
 
 						if (Kanboard.createTaskFile(session, listener, Integer.valueOf(projectId),
-								Integer.valueOf(taskId), filename, encodedFile, creatorId)) {
+								Integer.valueOf(taskId), filename, encodedFile, creatorId, debugMode)) {
 							listener.getLogger()
 									.println("File " + path + " successfully added to task " + taskRefValue + ".");
 						}
@@ -442,7 +451,8 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (ArrayUtils.isNotEmpty(taskExternalLinksValue)) {
 
-				JSONArray jsonLinks = Kanboard.getAllExternalTaskLinks(session, listener, Integer.valueOf(taskId));
+				JSONArray jsonLinks = Kanboard.getAllExternalTaskLinks(session, listener, Integer.valueOf(taskId),
+						debugMode);
 
 				Map<String, JSONObject> existingLinks = new HashMap<String, JSONObject>();
 
@@ -464,8 +474,8 @@ public class KanboardTaskPublisher extends Notifier {
 
 					try {
 
-						if (Kanboard.createExternalTaskLink(session, listener, Integer.valueOf(taskId), url,
-								creatorId)) {
+						if (Kanboard.createExternalTaskLink(session, listener, Integer.valueOf(taskId), url, creatorId,
+								debugMode)) {
 							listener.getLogger()
 									.println("Link " + url + " successfully added to task " + taskRefValue + ".");
 						}
@@ -482,17 +492,18 @@ public class KanboardTaskPublisher extends Notifier {
 			if (StringUtils.isNotBlank(taskCommentValue)) {
 
 				Object createResult = Kanboard.createComment(session, listener, Integer.valueOf(taskId), creatorId,
-						taskCommentValue);
+						taskCommentValue, debugMode);
 				if (!createResult.equals(Boolean.FALSE)) {
-					listener.getLogger()
-							.println("Comment " + createResult + " successfully added to task " + taskRefValue + ".");
+					listener.getLogger().println("Comment \"" + taskCommentValue + "\" [" + createResult
+							+ "] successfully added to task " + taskRefValue + ".");
 				}
 
 			}
 
 			if (StringUtils.isNotBlank(taskSubtaskTitleValue)) {
 
-				Object jsonSubtasksResult = Kanboard.getAllSubtasks(session, listener, Integer.valueOf(taskId));
+				Object jsonSubtasksResult = Kanboard.getAllSubtasks(session, listener, Integer.valueOf(taskId),
+						debugMode);
 
 				Map<String, JSONObject> existingSubtasks = new HashMap<String, JSONObject>();
 
@@ -514,10 +525,10 @@ public class KanboardTaskPublisher extends Notifier {
 					try {
 
 						Object createResult = Kanboard.createSubtask(session, listener, Integer.valueOf(taskId),
-								ownerId, taskSubtaskTitleValue);
+								ownerId, taskSubtaskTitleValue, debugMode);
 						if (!createResult.equals(Boolean.FALSE)) {
-							listener.getLogger().println(
-									"Subtask " + createResult + " successfully added to task " + taskRefValue + ".");
+							listener.getLogger().println("Subtask \"" + taskSubtaskTitleValue + "\" [" + createResult
+									+ "] successfully added to task " + taskRefValue + ".");
 						}
 
 					} catch (IOException e) {
@@ -528,11 +539,13 @@ public class KanboardTaskPublisher extends Notifier {
 
 				}
 
-				// Export task URL environment variable
-				if (StringUtils.isNotBlank(taskURL)) {
-					Utils.exportEnvironmentVariable(build, KANBOARD_TASKURL_ENVVAR, taskURL);
-				}
+			}
 
+			// Export task URL environment variable
+			if (StringUtils.isNotBlank(taskURL)) {
+				Utils.exportEnvironmentVariable(build, KANBOARD_TASKURL_ENVVAR, taskURL);
+				listener.getLogger().println("Task URL " + taskURL + " successfully exported to "
+						+ KANBOARD_TASKURL_ENVVAR + " environment variable");
 			}
 
 		} catch (JSONRPC2SessionException | IOException | InterruptedException | MacroEvaluationException e) {
@@ -556,6 +569,7 @@ public class KanboardTaskPublisher extends Notifier {
 		private String endpoint;
 		private String apiToken;
 		private String apiTokenCredentialId;
+		private boolean debugMode;
 
 		/**
 		 * In order to load the persisted global configuration, you have to call
@@ -581,6 +595,10 @@ public class KanboardTaskPublisher extends Notifier {
 
 		public String getApiTokenCredentialId() {
 			return apiTokenCredentialId;
+		}
+
+		public boolean isDebugMode() {
+			return debugMode;
 		}
 
 		@Override
@@ -638,6 +656,7 @@ public class KanboardTaskPublisher extends Notifier {
 			endpoint = formData.getString("endpoint");
 			apiToken = formData.getString("apiToken");
 			apiTokenCredentialId = formData.getString("apiTokenCredentialId");
+			debugMode = formData.getBoolean("debugMode");
 			save();
 			return super.configure(req, formData);
 		}

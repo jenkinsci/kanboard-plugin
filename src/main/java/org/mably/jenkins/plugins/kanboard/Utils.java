@@ -168,6 +168,10 @@ public class Utils {
 		});
 	}
 
+	public static String getImplementationVersion() {
+		return Utils.class.getPackage().getImplementationVersion();
+	}
+
 	private static String getTokenToUse(String apiTokenCredentialId, String apiToken) {
 		String token = apiToken;
 		if (apiTokenCredentialId != null && !apiTokenCredentialId.isEmpty()) {

@@ -15,5 +15,8 @@
     <f:validateButton
        title="Test Connection" progress="Testing..."
        method="testConnection" with="endpoint,apiToken,apiTokenCredentialId" />
+    <f:entry title="Debug mode" field="debugMode">
+      <f:checkbox/>
+    </f:entry>    
   </f:section>
 </j:jelly>
