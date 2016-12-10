@@ -21,6 +21,8 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
+import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 
 import com.cloudbees.plugins.credentials.CredentialsMatcher;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -33,6 +35,7 @@ import hudson.EnvVars;
 import hudson.ProxyConfiguration;
 import hudson.model.AbstractBuild;
 import hudson.model.EnvironmentContributingAction;
+import hudson.model.TaskListener;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
 
@@ -170,6 +173,21 @@ public class Utils {
 
 	public static String getImplementationVersion() {
 		return Utils.class.getPackage().getImplementationVersion();
+	}
+
+	public static String[] getCSVStringValue(AbstractBuild<?, ?> build, TaskListener listener, String line)
+			throws MacroEvaluationException, IOException, InterruptedException {
+		String[] itemValues;
+		if (StringUtils.isNotBlank(line)) {
+			String[] items = line.split(",");
+			itemValues = new String[items.length];
+			for (int i = 0; i < items.length; i++) {
+				itemValues[i] = TokenMacro.expandAll(build, listener, items[i]);
+			}
+		} else {
+			itemValues = null;
+		}
+		return itemValues;
 	}
 
 	private static String getTokenToUse(String apiTokenCredentialId, String apiToken) {

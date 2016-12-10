@@ -1,51 +1,51 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <f:entry title="Execute only if build succeeds" field="successfulBuildOnly">
+  <f:entry title="${%execute.only.if.builds.succeeds}" field="successfulBuildOnly">
     <f:checkbox default="true" />
   </f:entry>
-  <f:entry title="Project Identifier (required)" field="projectIdentifier">
+  <f:entry title="${%project.identifier.required}" field="projectIdentifier">
     <f:textbox />
   </f:entry>
-  <f:entry title="Task Reference (required)" field="taskReference">
+  <f:entry title="${%task.reference.required}${it.TASKREFERENCE_FIELD}" field="taskReference">
     <f:textbox />
   </f:entry>
-  <f:entry title="Column" field="taskColumn">
+  <f:entry title="${%column}" field="taskColumn">
     <f:textbox default="0" />
   </f:entry>  
-  <f:entry title="Owner" field="taskOwner">
+  <f:entry title="${%owner}" field="taskOwner">
     <f:textbox />
   </f:entry>
   <f:advanced>
-    <f:entry title="Creator (creation only)" field="taskCreator">
+    <f:entry title="${%creator}" field="taskCreator">
       <f:textbox />
     </f:entry>
-     <f:entry title="Title (creation only)" field="taskTitle"
-      description="The task reference will be used if left empty.">
+     <f:entry title="${%title}" field="taskTitle"
+      description="${%title.description}">
       <f:textbox />
     </f:entry>    
-    <f:entry title="Description (creation only)" field="taskDescription">
+    <f:entry title="${%description}" field="taskDescription">
       <f:textarea />
     </f:entry>
-    <f:entry title="Attachments" field="taskAttachments"
-      description="Comma separated list of paths to files that will be added to the Kanboard task.">
+    <f:entry title="${%attachments}" field="taskAttachments"
+      description="${%attachments.description}">
       <f:textbox />
     </f:entry>    
-    <f:entry title="External links" field="taskExternalLinks"
-      description="Comma separated list of external URLs that will be added to the Kanboard task.">
+    <f:entry title="${%external.links}" field="taskExternalLinks"
+      description="${%external.links.description}">
       <f:textbox />
     </f:entry>
-    <f:entry title="Swimlane" field="taskSwimlane"
-      description="At the moment should contain the swimlane technical ID (not the position) or 0 to keep it unchanged or use the default swimlane on creation.">
+    <f:entry title="${%swimlane}" field="taskSwimlane"
+      description="${%swimlane.description}">
       <f:textbox default="0" />
     </f:entry>
-    <f:entry title="Color (creation only)" field="taskColor">
+    <f:entry title="${%color}" field="taskColor">
       <f:select value="${taskColor}" />
     </f:entry>
-    <f:entry title="Comment (optional)" field="taskComment">
+    <f:entry title="${%comment}" field="taskComment">
       <f:textarea />
     </f:entry>    
-    <f:entry title="Subtask title (optional)" field="taskSubtaskTitle"
-      description="Title of the subtask.">
+    <f:entry title="${%subtask.title}" field="taskSubtaskTitle"
+      description="${%subtask.title.description}">
       <f:textbox />
     </f:entry>
   </f:advanced>
