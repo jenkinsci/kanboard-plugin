@@ -1,12 +1,10 @@
 package org.mably.jenkins.plugins.kanboard;
 
-import java.io.IOException;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
-import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
@@ -14,8 +12,6 @@ import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
 import hudson.AbortException;
-import hudson.model.AbstractBuild;
-import hudson.model.TaskListener;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 
@@ -50,6 +46,7 @@ public class Kanboard {
 	private static final String GET_TASK = "getTask";
 	private static final String GET_TASK_BY_REFERENCE = "getTaskByReference";
 	private static final String GET_USER_BY_NAME = "getUserByName";
+	private static final String GET_VERSION = "getVersion";
 	private static final String MOVE_TASK_POSITION = "moveTaskPosition";
 	private static final String REMOVE_TASK_FILE = "removeTaskFile";
 	private static final String UPDATE_TASK = "updateTask";
@@ -65,7 +62,25 @@ public class Kanboard {
 	static final String URL = "url";
 	static final String USER_ID = "user_id";
 
-	public static Object createComment(JSONRPC2Session session, TaskListener listener, Integer taskId, String userId,
+	static final String DEFAULT_COLOR = "";
+	static final String YELLOW = "yellow";
+	static final String BLUE = "blue";
+	static final String GREEN = "green";
+	static final String PURPLE = "purple";
+	static final String RED = "red";
+	static final String ORANGE = "orange";
+	static final String GREY = "grey";
+	static final String BROWN = "brown";
+	static final String DEEP_ORANGE = "deep_orange";
+	static final String DARK_GREY = "dark_grey";
+	static final String PINK = "pink";
+	static final String TEAL = "teal";
+	static final String CYAN = "cyan";
+	static final String LIME = "lime";
+	static final String LIGHT_GREEN = "light_green";
+	static final String AMBER = "amber";
+
+	public static Object createComment(JSONRPC2Session session, PrintStream logger, Integer taskId, String userId,
 			String content, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createComment request
@@ -80,26 +95,26 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static boolean createExternalTaskLink(JSONRPC2Session session, TaskListener listener, Integer taskId,
+	public static boolean createExternalTaskLink(JSONRPC2Session session, PrintStream logger, Integer taskId,
 			String url, String creatorId, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createExternalTaskLink request
@@ -116,26 +131,26 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return true;
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static Object createSubtask(JSONRPC2Session session, TaskListener listener, Integer taskId, String userId,
+	public static Object createSubtask(JSONRPC2Session session, PrintStream logger, Integer taskId, String userId,
 			String title, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createSubtask request
@@ -150,28 +165,28 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static Object createTask(JSONRPC2Session session, TaskListener listener, String projectId,
-			String taskRefValue, String creatorId, String ownerId, String taskTitleValue, String taskDescValue,
-			String columnId, String swimlaneId, String taskColorValue, boolean debugMode)
+	public static Object createTask(JSONRPC2Session session, PrintStream logger, String projectId, String taskRefValue,
+			String creatorId, String ownerId, String taskTitleValue, String taskDescValue, String columnId,
+			String swimlaneId, String taskColorValue, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createTask request
@@ -212,27 +227,27 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static boolean createTaskFile(JSONRPC2Session session, TaskListener listener, Integer projectId,
-			Integer taskId, String filename, String encodedFile, String creatorId, boolean debugMode)
+	public static boolean createTaskFile(JSONRPC2Session session, PrintStream logger, Integer projectId, Integer taskId,
+			String filename, String encodedFile, String creatorId, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createTaskFile request
@@ -246,26 +261,26 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return true;
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static JSONArray getAllExternalTaskLinks(JSONRPC2Session session, TaskListener listener, Integer taskId,
+	public static JSONArray getAllExternalTaskLinks(JSONRPC2Session session, PrintStream logger, Integer taskId,
 			boolean debugMode) throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getAllExternalTaskLinks request
@@ -275,27 +290,27 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return (JSONArray) response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static Object getAllSubtasks(JSONRPC2Session session, TaskListener listener, Integer taskId,
-			boolean debugMode) throws AbortException, JSONRPC2SessionException {
+	public static Object getAllSubtasks(JSONRPC2Session session, PrintStream logger, Integer taskId, boolean debugMode)
+			throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getAllSubtasks request
 		String method = GET_ALL_SUBTASKS;
@@ -304,26 +319,26 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static JSONArray getAllTaskFiles(JSONRPC2Session session, TaskListener listener, Integer taskId,
+	public static JSONArray getAllTaskFiles(JSONRPC2Session session, PrintStream logger, Integer taskId,
 			boolean debugMode) throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getAllTaskFiles request
@@ -333,56 +348,56 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return (JSONArray) response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static JSONObject getProjectByIdentifier(JSONRPC2Session session, TaskListener listener,
+	public static JSONObject getProjectByIdentifier(JSONRPC2Session session, PrintStream logger,
 			String projectIdentifierValue, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 		// Construct new getProjectByIdentifier request
 		String method = GET_PROJECT_BY_IDENTIFIER;
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put(IDENTIFIER, projectIdentifierValue);
 
-		listener.getLogger().println(Utils.LOG_SEPARATOR);
+		logger.println(Utils.LOG_SEPARATOR);
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return (JSONObject) response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static JSONArray getProjectColumns(JSONRPC2Session session, TaskListener listener, String projectId,
+	public static JSONArray getProjectColumns(JSONRPC2Session session, PrintStream logger, String projectId,
 			boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new getColumns request
@@ -392,14 +407,14 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
@@ -412,12 +427,12 @@ public class Kanboard {
 			}
 			return projectColumns;
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static JSONObject getTask(JSONRPC2Session session, TaskListener listener, String taskId, boolean debugMode)
+	public static JSONObject getTask(JSONRPC2Session session, PrintStream logger, String taskId, boolean debugMode)
 			throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getTask request
@@ -427,41 +442,26 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return (JSONObject) response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static String[] getTaskAttachemntsValue(AbstractBuild<?, ?> build, TaskListener listener,
-			String taskAttachments) throws MacroEvaluationException, IOException, InterruptedException {
-		String[] taskAttachmentsValue;
-		if (StringUtils.isNotBlank(taskAttachments)) {
-			String[] pathsArray = taskAttachments.split(",");
-			taskAttachmentsValue = new String[pathsArray.length];
-			for (int i = 0; i < pathsArray.length; i++) {
-				taskAttachmentsValue[i] = TokenMacro.expandAll(build, listener, pathsArray[i]);
-			}
-		} else {
-			taskAttachmentsValue = null;
-		}
-		return taskAttachmentsValue;
-	}
-
-	public static JSONObject getTaskByReference(JSONRPC2Session session, TaskListener listener, String projectId,
+	public static JSONObject getTaskByReference(JSONRPC2Session session, PrintStream logger, String projectId,
 			String taskRefValue, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new getTaskByReference request
@@ -472,41 +472,26 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return (JSONObject) response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static String[] getTaskExternalLinksValue(AbstractBuild<?, ?> build, TaskListener listener,
-			String taskExternalLinks) throws MacroEvaluationException, IOException, InterruptedException {
-		String[] taskExternalLinksValue;
-		if (StringUtils.isNotBlank(taskExternalLinks)) {
-			String[] linksArray = taskExternalLinks.split(",");
-			taskExternalLinksValue = new String[linksArray.length];
-			for (int i = 0; i < linksArray.length; i++) {
-				taskExternalLinksValue[i] = TokenMacro.expandAll(build, listener, linksArray[i]);
-			}
-		} else {
-			taskExternalLinksValue = null;
-		}
-		return taskExternalLinksValue;
-	}
-
-	public static JSONObject getUserByName(JSONRPC2Session session, TaskListener listener, String username,
+	public static JSONObject getUserByName(JSONRPC2Session session, PrintStream logger, String username,
 			boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new getUserByName request
@@ -516,26 +501,56 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return (JSONObject) response.getResult();
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static boolean moveTaskPosition(JSONRPC2Session session, TaskListener listener, Integer projectId,
+	public static String getVersion(JSONRPC2Session session, PrintStream logger, boolean debugMode)
+			throws AbortException, JSONRPC2SessionException {
+
+		// Construct new getVersion request
+		String method = GET_VERSION;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		if (debugMode && (logger != null)) {
+			logger.println(request.toJSONString());
+		}
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		if (debugMode && (logger != null)) {
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
+		}
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return (String) response.getResult();
+		} else {
+			if (debugMode && (logger != null)) {
+				logger.println(response.getError().getMessage());
+			}
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
+
+	public static boolean moveTaskPosition(JSONRPC2Session session, PrintStream logger, Integer projectId,
 			Integer taskId, Integer newColumnId, Integer newPosition, Integer swimlaneId, boolean debugMode)
 			throws AbortException, JSONRPC2SessionException {
 
@@ -552,27 +567,27 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return true;
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static boolean removeTaskFile(JSONRPC2Session session, TaskListener listener, Integer fileId,
-			boolean debugMode) throws JSONRPC2SessionException, AbortException {
+	public static boolean removeTaskFile(JSONRPC2Session session, PrintStream logger, Integer fileId, boolean debugMode)
+			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new removeTaskFile request
 		String method = REMOVE_TASK_FILE;
@@ -581,26 +596,26 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return true;
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
 
-	public static boolean updateTask(JSONRPC2Session session, TaskListener listener, String taskId, String newOwnerId,
+	public static boolean updateTask(JSONRPC2Session session, PrintStream logger, String taskId, String newOwnerId,
 			boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new updateTask request
@@ -614,21 +629,21 @@ public class Kanboard {
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
-			listener.getLogger().println(request.toJSONString());
+			logger.println(request.toJSONString());
 		}
 
 		// Send request
 		JSONRPC2Response response = session.send(request);
 		if (debugMode) {
-			listener.getLogger().println(response.toJSONString());
-			listener.getLogger().println(Utils.LOG_SEPARATOR);
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
 		}
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return true;
 		} else {
-			listener.getLogger().println(response.getError().getMessage());
+			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
