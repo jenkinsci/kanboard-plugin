@@ -4,6 +4,7 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
@@ -19,9 +20,7 @@ public class Kanboard {
 
 	private static final String BLOB = "blob";
 	private static final String COLOR_ID = "color_id";
-	private static final String CREATOR_ID = "creator_id";
 	private static final String DEPENDENCY = "dependency";
-	private static final String DEPENDENCY_RELATED = "related";
 	private static final String DESCRIPTION = "description";
 	private static final String FILE_ID = "file_id";
 	private static final String FILENAME = "filename";
@@ -30,14 +29,13 @@ public class Kanboard {
 	private static final String REFERENCE = "reference";
 	private static final String TASK_ID = "task_id";
 	private static final String TYPE = "type";
-	private static final String TYPE_WEBLINK = "weblink";
-	private static final String USERNAME = "username";
 
 	private static final String CREATE_COMMENT = "createComment";
 	private static final String CREATE_EXTERNAL_TASK_LINK = "createExternalTaskLink";
 	private static final String CREATE_SUBTASK = "createSubtask";
 	private static final String CREATE_TASK = "createTask";
 	private static final String CREATE_TASK_FILE = "createTaskFile";
+	private static final String DOWNLOAD_TASK_FILE = "downloadTaskFile";
 	private static final String GET_ALL_EXTERNAL_TASK_LINKS = "getAllExternalTaskLinks";
 	private static final String GET_ALL_SUBTASKS = "getAllSubtasks";
 	private static final String GET_ALL_TASK_FILES = "getAllTaskFiles";
@@ -45,6 +43,7 @@ public class Kanboard {
 	private static final String GET_PROJECT_BY_IDENTIFIER = "getProjectByIdentifier";
 	private static final String GET_TASK = "getTask";
 	private static final String GET_TASK_BY_REFERENCE = "getTaskByReference";
+	private static final String GET_USER = "getUser";
 	private static final String GET_USER_BY_NAME = "getUserByName";
 	private static final String GET_VERSION = "getVersion";
 	private static final String MOVE_TASK_POSITION = "moveTaskPosition";
@@ -53,7 +52,15 @@ public class Kanboard {
 
 	static final String COLUMN_ID = "column_id";
 	static final String CONTENT = "content";
+	static final String CREATOR_ID = "creator_id";
+	static final String DEPENDENCY_RELATED = "related";
 	static final String ID = "id";
+	static final String LINK_TYPE = "link_type";
+	static final String LINKTYPE_ATTACHMENT = "attachment";
+	static final String LINKTYPE_AUTO = "auto";
+	static final String LINKTYPE_FILE = "file";
+	static final String LINKTYPE_WEBLINK = "weblink";
+	static final String[] LINKTYPES = { LINKTYPE_AUTO, LINKTYPE_ATTACHMENT, LINKTYPE_FILE, LINKTYPE_WEBLINK };
 	static final String NAME = "name";
 	static final String OWNER_ID = "owner_id";
 	static final String POSITION = "position";
@@ -61,6 +68,7 @@ public class Kanboard {
 	static final String TITLE = "title";
 	static final String URL = "url";
 	static final String USER_ID = "user_id";
+	static final String USERNAME = "username";
 
 	static final String DEFAULT_COLOR = "";
 	static final String YELLOW = "yellow";
@@ -115,7 +123,8 @@ public class Kanboard {
 	}
 
 	public static boolean createExternalTaskLink(JSONRPC2Session session, PrintStream logger, Integer taskId,
-			String url, String creatorId, boolean debugMode) throws JSONRPC2SessionException, AbortException {
+			String url, String title, String type, String creatorId, boolean debugMode)
+			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createExternalTaskLink request
 		String method = CREATE_EXTERNAL_TASK_LINK;
@@ -123,7 +132,16 @@ public class Kanboard {
 		params.put(TASK_ID, taskId);
 		params.put(URL, url);
 		params.put(DEPENDENCY, DEPENDENCY_RELATED);
-		params.put(TYPE, TYPE_WEBLINK);
+
+		if (ArrayUtils.contains(LINKTYPES, type)) {
+			params.put(TYPE, type);
+		} else {
+			params.put(TYPE, LINKTYPE_WEBLINK);
+		}
+
+		if (StringUtils.isNotBlank(title)) {
+			params.put(TITLE, title);
+		}
 
 		if (StringUtils.isNotBlank(creatorId)) {
 			params.put(CREATOR_ID, Integer.valueOf(creatorId));
@@ -276,6 +294,37 @@ public class Kanboard {
 			return true;
 		} else {
 			logger.println(response.getError().getMessage());
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
+
+	public static String downloadTaskFile(JSONRPC2Session session, PrintStream logger, String fileId, boolean debugMode)
+			throws AbortException, JSONRPC2SessionException {
+
+		// Construct new downloadTaskFile request
+		String method = DOWNLOAD_TASK_FILE;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+		params.put(FILE_ID, Integer.valueOf(fileId));
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		if (debugMode && (logger != null)) {
+			logger.println(request.toJSONString());
+		}
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		if (debugMode && (logger != null)) {
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
+		}
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return (String) response.getResult();
+		} else {
+			if (debugMode && (logger != null)) {
+				logger.println(response.getError().getMessage());
+			}
 			throw new AbortException(response.getError().getMessage());
 		}
 	}
@@ -469,6 +518,35 @@ public class Kanboard {
 		HashMap<String, Object> params = new HashMap<String, Object>();
 		params.put(PROJECT_ID, projectId);
 		params.put(REFERENCE, taskRefValue);
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		if (debugMode) {
+			logger.println(request.toJSONString());
+		}
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		if (debugMode) {
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
+		}
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return (JSONObject) response.getResult();
+		} else {
+			logger.println(response.getError().getMessage());
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
+
+	public static JSONObject getUser(JSONRPC2Session session, PrintStream logger, String userId, boolean debugMode)
+			throws JSONRPC2SessionException, AbortException {
+
+		// Construct new getUser request
+		String method = GET_USER;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+		params.put(USER_ID, userId);
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {

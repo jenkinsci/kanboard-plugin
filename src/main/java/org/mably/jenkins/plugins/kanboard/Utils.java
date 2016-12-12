@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
@@ -40,6 +41,8 @@ import hudson.security.ACL;
 import jenkins.model.Jenkins;
 
 public class Utils {
+
+	private static final String COMMA = ",";
 
 	private static final Logger logger = Logger.getLogger(Utils.class.getName());
 
@@ -147,6 +150,13 @@ public class Utils {
 		return new String(encoded, Charset.defaultCharset());
 	}
 
+	public static File decodeBase64ToBinaryFile(String path, String base64String) throws IOException {
+		File file = new File(path);
+		byte[] data = Base64.decodeBase64(base64String);
+		FileUtils.writeByteArrayToFile(file, data);
+		return file;
+	}
+
 	public static void exportEnvironmentVariable(AbstractBuild<?, ?> build, final String name, final String value) {
 
 		build.addAction(new EnvironmentContributingAction() {
@@ -179,7 +189,7 @@ public class Utils {
 			throws MacroEvaluationException, IOException, InterruptedException {
 		String[] itemValues;
 		if (StringUtils.isNotBlank(line)) {
-			String[] items = line.split(",");
+			String[] items = line.split(COMMA);
 			itemValues = new String[items.length];
 			for (int i = 0; i < items.length; i++) {
 				itemValues[i] = TokenMacro.expandAll(build, listener, items[i]);
@@ -207,6 +217,35 @@ public class Utils {
 				Jenkins.getInstance(), ACL.SYSTEM, Collections.<DomainRequirement> emptyList());
 		CredentialsMatcher matcher = CredentialsMatchers.withId(credentialId);
 		return CredentialsMatchers.firstOrNull(credentials, matcher);
+	}
+
+	public static byte[] fetchURL(URL url) {
+
+		byte[] data = null;
+
+		HttpURLConnection conn = null;
+		try {
+
+			Proxy proxy = getJenkinsProxy(url);
+			if (proxy == null) {
+				conn = (HttpURLConnection) url.openConnection();
+			} else {
+				conn = (HttpURLConnection) url.openConnection(proxy);
+			}
+
+			conn.setRequestMethod("GET");
+
+			data = IOUtils.toByteArray(conn.getInputStream());
+
+		} catch (IOException e) {
+
+		} finally {
+			if (conn != null) {
+				conn.disconnect();
+			}
+		}
+
+		return data;
 	}
 
 }

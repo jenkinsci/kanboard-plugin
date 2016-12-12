@@ -1,28 +1,22 @@
 package org.mably.jenkins.plugins.kanboard;
 
-import static com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
-import javax.servlet.ServletException;
+import javax.inject.Inject;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2Session;
 import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
@@ -34,14 +28,11 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.TaskListener;
-import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
-import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 
@@ -216,7 +207,8 @@ public class KanboardTaskPublisher extends Notifier {
 
 		try {
 
-			final boolean debugMode = getDescriptor().isDebugMode();
+			KanboardGlobalConfiguration config = getDescriptor().getGlobalConfiguration();
+			final boolean debugMode = config.isDebugMode();
 			final PrintStream logger = listener.getLogger();
 
 			String projectIdentifierValue = TokenMacro.expandAll(build, listener, this.projectIdentifier);
@@ -238,11 +230,11 @@ public class KanboardTaskPublisher extends Notifier {
 
 			String[] taskExternalLinksValue = Utils.getCSVStringValue(build, listener, this.taskExternalLinks);
 
-			logger.println(Messages.kanboard_publisher_running(Utils.getImplementationVersion(),
-					getDescriptor().getEndpoint(), projectIdentifierValue, taskRefValue));
+			logger.println(Messages.kanboard_publisher_running(Utils.getImplementationVersion(), config.getEndpoint(),
+					projectIdentifierValue, taskRefValue));
 
-			JSONRPC2Session session = Utils.initJSONRPCSession(getDescriptor().getEndpoint(),
-					getDescriptor().getApiToken(), getDescriptor().getApiTokenCredentialId());
+			JSONRPC2Session session = Utils.initJSONRPCSession(config.getEndpoint(), config.getApiToken(),
+					config.getApiTokenCredentialId());
 
 			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, logger, projectIdentifierValue,
 					debugMode);
@@ -459,16 +451,29 @@ public class KanboardTaskPublisher extends Notifier {
 
 				for (int i = 0; i < taskExternalLinksValue.length; i++) {
 
-					String url = taskExternalLinksValue[i];
+					String[] linkItems = taskExternalLinksValue[i].split(Pattern.quote("|"));
+
+					String url = linkItems[0];
 
 					if (existingLinks.containsKey(url)) {
 						continue; // Don't create already existing links
 					}
 
+					String title = null;
+					String type = null;
+					if (linkItems.length >= 2) {
+						if (ArrayUtils.contains(Kanboard.LINKTYPES, linkItems[1])) {
+							type = linkItems[1];
+						}
+						if (linkItems.length >= 3) {
+							title = linkItems[2];
+						}
+					}
+
 					try {
 
-						if (Kanboard.createExternalTaskLink(session, logger, Integer.valueOf(taskId), url, creatorId,
-								debugMode)) {
+						if (Kanboard.createExternalTaskLink(session, logger, Integer.valueOf(taskId), url, title, type,
+								creatorId, debugMode)) {
 							logger.println(Messages.external_link_create_success(url, taskRefValue));
 						}
 
@@ -547,52 +552,14 @@ public class KanboardTaskPublisher extends Notifier {
 		return true;
 	}
 
-	/**
-	 * Descriptor for {@link KanboardTaskPublisher}. Used as a singleton. The
-	 * class is marked as public so that it can be accessed from views.
-	 *
-	 */
 	@Extension
 	public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
 
-		static final String ENDPOINT_FIELD = "endpoint";
-		static final String APITOKEN_FIELD = "apiToken";
-		static final String APITOKENCREDENTIALID_FIELD = "apiTokenCredentialId";
-		static final String DEBUGMODE_FIELD = "debugMode";
+		@Inject
+		KanboardGlobalConfiguration globalConfiguration;
 
-		private String endpoint;
-		private String apiToken;
-		private String apiTokenCredentialId;
-		private boolean debugMode;
-
-		/**
-		 * In order to load the persisted global configuration, you have to call
-		 * load() in the constructor.
-		 */
 		public DescriptorImpl() {
-			load();
-		}
 
-		/**
-		 * @return Kanboard endpoint URL
-		 */
-		public String getEndpoint() {
-			return endpoint;
-		}
-
-		/**
-		 * @return Kanboard JSON/RPC API token
-		 */
-		public String getApiToken() {
-			return apiToken;
-		}
-
-		public String getApiTokenCredentialId() {
-			return apiTokenCredentialId;
-		}
-
-		public boolean isDebugMode() {
-			return debugMode;
 		}
 
 		@Override
@@ -600,64 +567,14 @@ public class KanboardTaskPublisher extends Notifier {
 			return true;
 		}
 
-		/**
-		 * This human readable name is used in the configuration screen.
-		 */
 		@Override
 		public String getDisplayName() {
 			return Messages.kanboard_publisher();
 		}
 
-		public FormValidation doCheckEndpoint(@QueryParameter String endpoint) throws IOException, ServletException {
-			if (StringUtils.isNotBlank(endpoint)) {
-				if (!Utils.checkJSONRPCEndpoint(endpoint)) {
-					return FormValidation.error(Messages.invalid_endpoint_error());
-				}
-			}
-			return FormValidation.ok();
-		}
-
-		public FormValidation doCheckApiToken(@QueryParameter String apiToken) throws IOException, ServletException {
-			return FormValidation.ok();
-		}
-
-		public FormValidation doTestConnection(@QueryParameter(ENDPOINT_FIELD) final String endpoint,
-				@QueryParameter(APITOKEN_FIELD) final String apiToken,
-				@QueryParameter(APITOKENCREDENTIALID_FIELD) final String apiTokenCredentialId)
-				throws IOException, ServletException {
-			if (StringUtils.isNotBlank(endpoint) && Utils.checkJSONRPCEndpoint(endpoint)
-					&& (StringUtils.isNotBlank(apiToken) || StringUtils.isNotBlank(apiTokenCredentialId))) {
-				try {
-					JSONRPC2Session session = Utils.initJSONRPCSession(endpoint, apiToken, apiTokenCredentialId);
-					String version = Kanboard.getVersion(session, null, false);
-					return FormValidation.ok(Messages.testconnection_success(version));
-				} catch (Exception e) {
-					return FormValidation.error(Messages.testconnection_error(e.getMessage()));
-				}
-			} else {
-				return FormValidation.error(Messages.testconnection_invalid());
-			}
-		}
-
-		@Override
-		public boolean configure(StaplerRequest req, net.sf.json.JSONObject formData) throws FormException {
-			endpoint = formData.getString(ENDPOINT_FIELD);
-			apiToken = formData.getString(APITOKEN_FIELD);
-			apiTokenCredentialId = formData.getString(APITOKENCREDENTIALID_FIELD);
-			debugMode = formData.getBoolean(DEBUGMODE_FIELD);
-			save();
-			return super.configure(req, formData);
-		}
-
-		public ListBoxModel doFillApiTokenCredentialIdItems(@QueryParameter final String endpoint) {
-			Jenkins jenkins = Jenkins.getInstance();
-			if ((jenkins != null) && !jenkins.hasPermission(Jenkins.ADMINISTER)) {
-				return new ListBoxModel();
-			}
-			return new StandardListBoxModel().withEmptySelection().withAll(lookupCredentials(StringCredentials.class,
-					jenkins, ACL.SYSTEM, URIRequirementBuilder.fromUri(endpoint).build()));
-		}
-
+		/**
+		 * @return Fills task color selection dropdown list
+		 */
 		public ListBoxModel doFillTaskColorItems() {
 			ListBoxModel items = new ListBoxModel();
 			items.add(Messages.defaultColor(), Kanboard.DEEP_ORANGE);
@@ -679,6 +596,13 @@ public class KanboardTaskPublisher extends Notifier {
 			items.add(Messages.amber(), Kanboard.AMBER);
 			return items;
 		}
-	}
 
+		/**
+		 * @return Actual GlobalConfiguration that contributes to the system
+		 *         configuration page.
+		 */
+		public KanboardGlobalConfiguration getGlobalConfiguration() {
+			return this.globalConfiguration;
+		}
+	}
 }
