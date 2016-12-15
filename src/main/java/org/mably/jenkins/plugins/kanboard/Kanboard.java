@@ -26,7 +26,7 @@ public class Kanboard {
 	private static final String FILENAME = "filename";
 	private static final String IDENTIFIER = "identifier";
 	private static final String PROJECT_ID = "project_id";
-	private static final String REFERENCE = "reference";
+	private static final String QUERY = "query";
 	private static final String TASK_ID = "task_id";
 	private static final String TYPE = "type";
 
@@ -48,11 +48,13 @@ public class Kanboard {
 	private static final String GET_VERSION = "getVersion";
 	private static final String MOVE_TASK_POSITION = "moveTaskPosition";
 	private static final String REMOVE_TASK_FILE = "removeTaskFile";
+	private static final String SEARCH_TASKS = "searchTasks";
 	private static final String UPDATE_TASK = "updateTask";
 
 	static final String COLUMN_ID = "column_id";
 	static final String CONTENT = "content";
 	static final String CREATOR_ID = "creator_id";
+	static final String DATE_CREATION = "date_creation";
 	static final String DEPENDENCY_RELATED = "related";
 	static final String ID = "id";
 	static final String LINK_TYPE = "link_type";
@@ -64,6 +66,7 @@ public class Kanboard {
 	static final String NAME = "name";
 	static final String OWNER_ID = "owner_id";
 	static final String POSITION = "position";
+	static final String REFERENCE = "reference";
 	static final String SWIMLANE_ID = "swimlane_id";
 	static final String TITLE = "title";
 	static final String URL = "url";
@@ -423,8 +426,6 @@ public class Kanboard {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put(IDENTIFIER, projectIdentifierValue);
 
-		logger.println(Utils.LOG_SEPARATOR);
-
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
 			logger.println(request.toJSONString());
@@ -687,6 +688,36 @@ public class Kanboard {
 		// Print response result / error
 		if (response.indicatesSuccess()) {
 			return true;
+		} else {
+			logger.println(response.getError().getMessage());
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
+
+	public static JSONArray searchTasks(JSONRPC2Session session, PrintStream logger, Integer projectId, String query,
+			boolean debugMode) throws AbortException, JSONRPC2SessionException {
+
+		// Construct new searchTasks request
+		String method = SEARCH_TASKS;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+		params.put(PROJECT_ID, projectId);
+		params.put(QUERY, query);
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		if (debugMode) {
+			logger.println(request.toJSONString());
+		}
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		if (debugMode) {
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
+		}
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return (JSONArray) response.getResult();
 		} else {
 			logger.println(response.getError().getMessage());
 			throw new AbortException(response.getError().getMessage());

@@ -43,9 +43,6 @@ import net.minidev.json.JSONObject;
  */
 public class KanboardTaskPublisher extends Notifier {
 
-	static final String KANBOARD_TASKURL_ENVVAR = "KANBOARD_TASKURL";
-	static final String KANBOARD_TASKCOLOR_ENVVAR = "KANBOARD_TASKCOLOR";
-
 	private final String projectIdentifier;
 	private final String taskReference;
 
@@ -540,8 +537,8 @@ public class KanboardTaskPublisher extends Notifier {
 
 			// Export task URL environment variable
 			if (StringUtils.isNotBlank(taskURL)) {
-				Utils.exportEnvironmentVariable(build, KANBOARD_TASKURL_ENVVAR, taskURL);
-				logger.println(Messages.taskurl_envvar_success(taskURL, KANBOARD_TASKURL_ENVVAR));
+				Utils.exportEnvironmentVariable(build, KanboardPlugin.KANBOARD_TASKURL_ENVVAR, taskURL);
+				logger.println(Messages.taskurl_envvar_success(taskURL, KanboardPlugin.KANBOARD_TASKURL_ENVVAR));
 			}
 
 		} catch (JSONRPC2SessionException | IOException | InterruptedException | MacroEvaluationException e) {
@@ -595,7 +592,7 @@ public class KanboardTaskPublisher extends Notifier {
 			items.add(Messages.lime(), Kanboard.LIME);
 			items.add(Messages.lightGreen(), Kanboard.LIGHT_GREEN);
 			items.add(Messages.amber(), Kanboard.AMBER);
-			items.add(Messages.colorEnvVar(), "$" + KANBOARD_TASKCOLOR_ENVVAR);
+			items.add(Messages.colorEnvVar(), "$" + KanboardPlugin.KANBOARD_TASKCOLOR_ENVVAR);
 			return items;
 		}
 
