@@ -108,13 +108,10 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 
 		try {
 
-			boolean debugMode = false;
-			PrintStream logger = System.out;
-
-			int lastTriggerTimestamp = getLastTimestamp();
-			int newTriggerTimestamp = lastTriggerTimestamp;
-
 			KanboardGlobalConfiguration config = getDescriptor().getGlobalConfiguration();
+
+			boolean debugMode = config.isDebugMode();
+			PrintStream logger = System.out;
 
 			JSONRPC2Session session = Utils.initJSONRPCSession(config.getEndpoint(), config.getApiToken(),
 					config.getApiTokenCredentialId());
@@ -126,6 +123,9 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 			String projectId = (String) jsonProject.get(Kanboard.ID);
 
 			JSONArray jsonTasks = Kanboard.searchTasks(session, logger, Integer.valueOf(projectId), query, debugMode);
+
+			int lastTriggerTimestamp = getLastTimestamp();
+			int newTriggerTimestamp = lastTriggerTimestamp;
 
 			List<JSONObject> updatedTasksList = new ArrayList<JSONObject>();
 			for (int i = 0; i < jsonTasks.size(); i++) {
