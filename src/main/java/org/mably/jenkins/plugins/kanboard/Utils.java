@@ -1,5 +1,7 @@
 package org.mably.jenkins.plugins.kanboard;
 
+import static hudson.Util.fixNull;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -99,7 +101,7 @@ public class Utils {
 			throws MalformedURLException {
 
 		// The JSON-RPC 2.0 server URL
-		URL serverURL = new URL(endpoint);
+		URL serverURL = new URL(fixNull(endpoint));
 
 		// Create new JSON-RPC 2.0 client session
 		JSONRPC2Session session = new JSONRPC2Session(serverURL);
@@ -117,7 +119,7 @@ public class Utils {
 	public static boolean checkJSONRPCEndpoint(String endpoint) {
 		boolean valid = false;
 		try {
-			URL endpointURL = new URL(endpoint);
+			URL endpointURL = new URL(fixNull(endpoint));
 			Proxy proxy = getJenkinsProxy(endpointURL);
 			URLConnection conn;
 			if (proxy == null) {
