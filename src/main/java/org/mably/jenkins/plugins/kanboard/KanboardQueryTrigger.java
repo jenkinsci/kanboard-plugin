@@ -132,13 +132,15 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 				try {
 					JSONObject jsonTask = (JSONObject) jsonTasks.get(i);
 					String reference = (String) jsonTask.get(Kanboard.REFERENCE);
-					String dateCreation = (String) jsonTask.get(Kanboard.DATE_CREATION);
-					int currentTimestamp = Integer.parseInt(dateCreation);
-					if (checkTaskReference(reference) && (currentTimestamp > lastTriggerTimestamp)) {
-						updatedTasksList.add(jsonTask);
-					}
-					if (currentTimestamp > newTriggerTimestamp) {
-						newTriggerTimestamp = currentTimestamp;
+					if (checkTaskReference(reference)) {
+						String dateMoved = (String) jsonTask.get(Kanboard.DATE_MOVED);
+						int currentTimestamp = Integer.parseInt(dateMoved);
+						if (currentTimestamp > lastTriggerTimestamp) {
+							updatedTasksList.add(jsonTask);
+						}
+						if (currentTimestamp > newTriggerTimestamp) {
+							newTriggerTimestamp = currentTimestamp;
+						}
 					}
 				} catch (Exception e) {
 					LOGGER.warning(e.getMessage());
