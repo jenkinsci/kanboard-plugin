@@ -13,8 +13,8 @@
   <version>1.5.3-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
-  <name>Kanboard Publisher</name>
-  <description>A Jenkins plugin that allows to create or update a Kanboard task as a post-build action.</description>
+  <name>Kanboard Plugin</name>
+  <description>A plugin that allows to create or update a Kanboard task as a post-build action, trigger a build when a task is created or moved, and fetch a task and its attachments as a build step.</description>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Kanboard+Publisher+Plugin</url>
 
   <properties>
