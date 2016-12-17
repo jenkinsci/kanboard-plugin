@@ -52,9 +52,9 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 	private final Pattern referencePattern;
 
 	@DataBoundConstructor
-	public KanboardQueryTrigger(String cronTabSpec, String projectIdentifier, String query, String referenceRegexp)
+	public KanboardQueryTrigger(String spec, String projectIdentifier, String query, String referenceRegexp)
 			throws ANTLRException {
-		super(cronTabSpec);
+		super(spec); // crontab configuration
 		this.projectIdentifier = projectIdentifier;
 		this.query = query;
 		this.referenceRegexp = referenceRegexp;
