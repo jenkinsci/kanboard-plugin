@@ -40,6 +40,10 @@ import hudson.model.AbstractBuild;
 import hudson.model.EnvironmentContributingAction;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
+import hudson.slaves.EnvironmentVariablesNodeProperty;
+import hudson.slaves.NodeProperty;
+import hudson.slaves.NodePropertyDescriptor;
+import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
 
 public class Utils {
@@ -248,6 +252,38 @@ public class Utils {
 		}
 
 		return data;
+	}
+
+	public static EnvVars getGlobalEnvVars() {
+
+		EnvVars envVars;
+
+		Jenkins jenkins = Jenkins.getInstance();
+
+		if (jenkins == null) {
+
+			envVars = new EnvVars();
+
+		} else {
+
+			DescribableList<NodeProperty<?>, NodePropertyDescriptor> nodeProps = jenkins.getGlobalNodeProperties();
+
+			List<EnvironmentVariablesNodeProperty> envVarNodeProps = nodeProps
+					.getAll(EnvironmentVariablesNodeProperty.class);
+
+			if (envVarNodeProps.isEmpty()) {
+				envVars = new EnvVars();
+			} else {
+				envVars = ((EnvironmentVariablesNodeProperty) envVarNodeProps.get(0)).getEnvVars();
+			}
+		}
+
+		return envVars;
+	}
+
+	public static String expandFromGlobalEnvVars(String s) {
+		EnvVars envVars = Utils.getGlobalEnvVars();
+		return envVars.expand(s);
 	}
 
 }
