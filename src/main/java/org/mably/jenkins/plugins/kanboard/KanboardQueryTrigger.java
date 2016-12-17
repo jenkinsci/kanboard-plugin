@@ -10,14 +10,15 @@ import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.inject.Inject;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
@@ -26,6 +27,7 @@ import com.thetransactioncompany.jsonrpc2.client.JSONRPC2SessionException;
 
 import antlr.ANTLRException;
 import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.BuildableItem;
@@ -45,46 +47,38 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 	private static final Logger LOGGER = Logger.getLogger(KanboardQueryTrigger.class.getName());
 
 	private static final String FINGERPRINT_FILE_NAME = "kanboard-query-trigger-last";
+	private static final String JSON_TASK_GROUPS = "_groups_";
 
+	private final String crontabSpec;
 	private final String projectIdentifier;
 	private final String query;
 	private final String referenceRegexp;
-	private final Pattern referencePattern;
 
 	@DataBoundConstructor
-	public KanboardQueryTrigger(String spec, String projectIdentifier, String query, String referenceRegexp)
+	public KanboardQueryTrigger(String crontabSpec, String projectIdentifier, String query, String referenceRegexp)
 			throws ANTLRException {
-		super(spec); // crontab configuration
+		super(Utils.expandFromGlobalEnvVars(crontabSpec));
+		this.crontabSpec = crontabSpec;
 		this.projectIdentifier = projectIdentifier;
 		this.query = query;
 		this.referenceRegexp = referenceRegexp;
-		if (StringUtils.isNotBlank(referenceRegexp)) {
-			this.referencePattern = Pattern.compile(referenceRegexp);
-		} else {
-			this.referencePattern = null;
-		}
-	}
-
-	@Override
-	public void start(BuildableItem project, boolean newInstance) {
-		super.start(project, newInstance);
 	}
 
 	@Override
 	public void run() {
-		JSONObject[] updatedTasks = updatedTasks();
-		if (ArrayUtils.isNotEmpty(updatedTasks)) {
-			for (int i = 0; i < updatedTasks.length; i++) {
-				JSONObject updatedTask = (JSONObject) updatedTasks[i];
-				KanboardQueryTriggerCause theCause = new KanboardQueryTriggerCause(updatedTask);
+		JSONObject[] foundTasks = queryTasks();
+		if (ArrayUtils.isNotEmpty(foundTasks)) {
+			for (int i = 0; i < foundTasks.length; i++) {
+				JSONObject task = (JSONObject) foundTasks[i];
+				KanboardQueryTriggerCause theCause = new KanboardQueryTriggerCause(task);
 				if (this.job instanceof AbstractProject) {
 					AbstractProject theJob = (AbstractProject) this.job;
-					String reference = (String) updatedTask.get(Kanboard.REFERENCE);
+					String reference = (String) task.get(Kanboard.REFERENCE);
 					StringParameterValue refParamValue = new StringParameterValue(
 							KanboardPlugin.KANBOARD_TASKREF_ENVVAR, reference);
 					List<ParameterValue> refParamValues = new ArrayList<ParameterValue>();
 					refParamValues.add(refParamValue);
-					String[] groups = getTaskReferenceGroups(reference);
+					String[] groups = (String[]) task.get(JSON_TASK_GROUPS);
 					if (ArrayUtils.isNotEmpty(groups)) {
 						for (int g = 0; g < groups.length; g++) {
 							String group = groups[g];
@@ -102,11 +96,13 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 		}
 	}
 
-	private JSONObject[] updatedTasks() {
+	private JSONObject[] queryTasks() {
 
-		JSONObject[] updatedTasks = null;
+		JSONObject[] foundTasks = null;
 
 		try {
+
+			EnvVars envVars = Utils.getGlobalEnvVars();
 
 			KanboardGlobalConfiguration config = getDescriptor().getGlobalConfiguration();
 
@@ -116,27 +112,35 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 			JSONRPC2Session session = Utils.initJSONRPCSession(config.getEndpoint(), config.getApiToken(),
 					config.getApiTokenCredentialId());
 
-			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, logger, projectIdentifier, debugMode);
+			String projectIdentifierValue = envVars.expand(this.projectIdentifier);
+			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, logger, projectIdentifierValue,
+					debugMode);
 			if (jsonProject == null) {
-				throw new RuntimeException(Messages.project_not_found(projectIdentifier));
+				throw new RuntimeException(Messages.project_not_found(projectIdentifierValue));
 			}
 			String projectId = (String) jsonProject.get(Kanboard.ID);
 
-			JSONArray jsonTasks = Kanboard.searchTasks(session, logger, Integer.valueOf(projectId), query, debugMode);
+			String queryValue = envVars.expand(this.query);
+			JSONArray jsonTasks = Kanboard.searchTasks(session, logger, Integer.valueOf(projectId), queryValue,
+					debugMode);
+
+			Pattern referencePattern = this.getReferencePattern(envVars);
 
 			int lastTriggerTimestamp = getLastTimestamp();
 			int newTriggerTimestamp = lastTriggerTimestamp;
 
-			List<JSONObject> updatedTasksList = new ArrayList<JSONObject>();
+			List<JSONObject> foundTasksList = new ArrayList<JSONObject>();
 			for (int i = 0; i < jsonTasks.size(); i++) {
 				try {
 					JSONObject jsonTask = (JSONObject) jsonTasks.get(i);
 					String reference = (String) jsonTask.get(Kanboard.REFERENCE);
-					if (checkTaskReference(reference)) {
+					String[] refGroups = getTaskRefMatchGroups(reference, referencePattern);
+					if (refGroups != null) {
 						String dateMoved = (String) jsonTask.get(Kanboard.DATE_MOVED);
 						int currentTimestamp = Integer.parseInt(dateMoved);
 						if (currentTimestamp > lastTriggerTimestamp) {
-							updatedTasksList.add(jsonTask);
+							jsonTask.put(JSON_TASK_GROUPS, refGroups);
+							foundTasksList.add(jsonTask);
 						}
 						if (currentTimestamp > newTriggerTimestamp) {
 							newTriggerTimestamp = currentTimestamp;
@@ -147,7 +151,7 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 				}
 			}
 
-			updatedTasks = updatedTasksList.toArray(new JSONObject[updatedTasksList.size()]);
+			foundTasks = foundTasksList.toArray(new JSONObject[foundTasksList.size()]);
 
 			setLastTimestamp(newTriggerTimestamp);
 
@@ -157,26 +161,27 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 
 		}
 
-		return updatedTasks;
+		return foundTasks;
 	}
 
-	private boolean checkTaskReference(String reference) {
-		boolean checked;
-		if (this.referencePattern == null) {
-			checked = true;
-		} else {
-			Matcher matcher = this.referencePattern.matcher(reference);
-			checked = matcher.find();
+	private Pattern getReferencePattern(EnvVars envVars) {
+		Pattern referencePattern;
+		String referenceRegexpValue = envVars.expand(this.referenceRegexp);
+		try {
+			referencePattern = Pattern.compile(referenceRegexpValue);
+		} catch (PatternSyntaxException e) {
+			referencePattern = null;
+			LOGGER.log(Level.FINE, "Failed to compile the task reference pattern: " + referenceRegexpValue, e);
 		}
-		return checked;
+		return referencePattern;
 	}
 
-	private String[] getTaskReferenceGroups(String reference) {
+	private String[] getTaskRefMatchGroups(String reference, Pattern refPattern) {
 		String[] groups;
-		if (this.referencePattern == null) {
-			groups = null;
+		if (refPattern == null) {
+			groups = new String[0];
 		} else {
-			Matcher matcher = this.referencePattern.matcher(reference);
+			Matcher matcher = refPattern.matcher(reference);
 			if (matcher.matches()) {
 				groups = new String[matcher.groupCount()];
 				for (int i = 0; i < matcher.groupCount(); i++) {
@@ -187,6 +192,10 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 			}
 		}
 		return groups;
+	}
+
+	public String getCrontabSpec() {
+		return crontabSpec;
 	}
 
 	public String getProjectIdentifier() {
