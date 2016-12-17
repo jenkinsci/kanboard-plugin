@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>kanboard-publisher</artifactId>
-  <version>1.5.4-SNAPSHOT</version>
+  <version>1.5.4</version>
   <packaging>hpi</packaging>
 
   <name>Kanboard Plugin</name>
@@ -55,7 +55,7 @@
     <connection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
     <developerConnection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-    <tag>HEAD</tag>
+    <tag>kanboard-publisher-1.5.4</tag>
   </scm>
 
   <repositories>
