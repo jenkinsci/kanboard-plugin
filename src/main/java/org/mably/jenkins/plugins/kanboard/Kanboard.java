@@ -55,6 +55,7 @@ public class Kanboard {
 	static final String CONTENT = "content";
 	static final String CREATOR_ID = "creator_id";
 	static final String DATE_CREATION = "date_creation";
+	static final String DATE_MOVED = "date_moved";
 	static final String DEPENDENCY_RELATED = "related";
 	static final String ID = "id";
 	static final String LINK_TYPE = "link_type";
