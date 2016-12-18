@@ -19,6 +19,7 @@ import java.util.regex.PatternSyntaxException;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
@@ -29,6 +30,7 @@ import antlr.ANTLRException;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.BuildableItem;
 import hudson.model.Item;
@@ -57,7 +59,7 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 	@DataBoundConstructor
 	public KanboardQueryTrigger(String crontabSpec, String projectIdentifier, String query, String referenceRegexp)
 			throws ANTLRException {
-		super(Utils.expandFromGlobalEnvVars(crontabSpec));
+		super(Util.replaceMacro(crontabSpec, Utils.getNodeEnvVars()));
 		this.crontabSpec = crontabSpec;
 		this.projectIdentifier = projectIdentifier;
 		this.query = query;
@@ -97,14 +99,18 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 	}
 
 	private JSONObject[] queryTasks() {
+		KanboardGlobalConfiguration config = getDescriptor().getGlobalConfiguration();
+		return queryTasks(config, this.projectIdentifier, this.query, this.referenceRegexp, getFingerprintFile());
+	}
+
+	private static JSONObject[] queryTasks(KanboardGlobalConfiguration config, String projectIdentifier, String query,
+			String referenceRegexp, File fingerprintFile) {
 
 		JSONObject[] foundTasks = null;
 
 		try {
 
-			EnvVars envVars = Utils.getGlobalEnvVars();
-
-			KanboardGlobalConfiguration config = getDescriptor().getGlobalConfiguration();
+			EnvVars envVars = Utils.getNodeEnvVars();
 
 			boolean debugMode = config.isDebugMode();
 			PrintStream logger = System.out;
@@ -112,7 +118,7 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 			JSONRPC2Session session = Utils.initJSONRPCSession(config.getEndpoint(), config.getApiToken(),
 					config.getApiTokenCredentialId());
 
-			String projectIdentifierValue = envVars.expand(this.projectIdentifier);
+			String projectIdentifierValue = Util.replaceMacro(projectIdentifier, envVars);
 			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, logger, projectIdentifierValue,
 					debugMode);
 			if (jsonProject == null) {
@@ -120,13 +126,18 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 			}
 			String projectId = (String) jsonProject.get(Kanboard.ID);
 
-			String queryValue = envVars.expand(this.query);
+			String queryValue = Util.replaceMacro(query, envVars);
 			JSONArray jsonTasks = Kanboard.searchTasks(session, logger, Integer.valueOf(projectId), queryValue,
 					debugMode);
 
-			Pattern referencePattern = this.getReferencePattern(envVars);
+			Pattern referencePattern = getReferencePattern(referenceRegexp, envVars);
 
-			int lastTriggerTimestamp = getLastTimestamp();
+			int lastTriggerTimestamp;
+			if (fingerprintFile == null) { // In case of query testing
+				lastTriggerTimestamp = 0;
+			} else {
+				lastTriggerTimestamp = getLastTimestamp(fingerprintFile);
+			}
 			int newTriggerTimestamp = lastTriggerTimestamp;
 
 			List<JSONObject> foundTasksList = new ArrayList<JSONObject>();
@@ -153,7 +164,9 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 
 			foundTasks = foundTasksList.toArray(new JSONObject[foundTasksList.size()]);
 
-			setLastTimestamp(newTriggerTimestamp);
+			if (fingerprintFile != null) {
+				setLastTimestamp(newTriggerTimestamp, fingerprintFile);
+			}
 
 		} catch (MalformedURLException | AbortException | JSONRPC2SessionException e) {
 
@@ -164,19 +177,23 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 		return foundTasks;
 	}
 
-	private Pattern getReferencePattern(EnvVars envVars) {
+	private static Pattern getReferencePattern(String referenceRegexp, EnvVars envVars) {
 		Pattern referencePattern;
-		String referenceRegexpValue = envVars.expand(this.referenceRegexp);
-		try {
-			referencePattern = Pattern.compile(referenceRegexpValue);
-		} catch (PatternSyntaxException e) {
+		String referenceRegexpValue = Util.replaceMacro(referenceRegexp, envVars);
+		if (StringUtils.isBlank(referenceRegexpValue)) {
 			referencePattern = null;
-			LOGGER.log(Level.FINE, "Failed to compile the task reference pattern: " + referenceRegexpValue, e);
+		} else {
+			try {
+				referencePattern = Pattern.compile(referenceRegexpValue);
+			} catch (PatternSyntaxException e) {
+				referencePattern = null;
+				LOGGER.log(Level.FINE, "Failed to compile the task reference pattern: " + referenceRegexpValue, e);
+			}
 		}
 		return referencePattern;
 	}
 
-	private String[] getTaskRefMatchGroups(String reference, Pattern refPattern) {
+	private static String[] getTaskRefMatchGroups(String reference, Pattern refPattern) {
 		String[] groups;
 		if (refPattern == null) {
 			groups = new String[0];
@@ -214,10 +231,10 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 		return new File(job.getRootDir(), FINGERPRINT_FILE_NAME);
 	}
 
-	private int getLastTimestamp() {
+	private static int getLastTimestamp(File fingerprintFile) {
 		int timestamp;
 		try {
-			FileInputStream fis = new FileInputStream(getFingerprintFile());
+			FileInputStream fis = new FileInputStream(fingerprintFile);
 			DataInputStream dis = new DataInputStream(fis);
 			timestamp = dis.readInt();
 			dis.close();
@@ -228,9 +245,9 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 		return timestamp;
 	}
 
-	private void setLastTimestamp(int timestamp) {
+	private static void setLastTimestamp(int timestamp, File fingerprintFile) {
 		try {
-			FileOutputStream fos = new FileOutputStream(getFingerprintFile());
+			FileOutputStream fos = new FileOutputStream(fingerprintFile);
 			DataOutputStream dos = new DataOutputStream(fos);
 			dos.writeInt(timestamp);
 			dos.close();
@@ -247,7 +264,9 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 	@Extension
 	public static final class DescriptorImpl extends TriggerDescriptor {
 
-		static final String QUERY_FIELD = "query";
+		private static final String PROJECTID_FIELD = "projectIdentifier";
+		private static final String QUERY_FIELD = "query";
+		private static final String REFREGEXP_FIELD = "referenceRegexp";
 
 		@Inject
 		KanboardGlobalConfiguration globalConfiguration;
@@ -267,10 +286,18 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 		}
 
 		/**
-		 * Performs syntax check.
+		 * Performs Kanboard query check.
 		 */
-		public FormValidation doCheckQuery(@QueryParameter(QUERY_FIELD) String query) {
-			return FormValidation.ok();
+		public FormValidation doTestQuery(@QueryParameter(PROJECTID_FIELD) final String projectIdentifier,
+				@QueryParameter(QUERY_FIELD) final String query,
+				@QueryParameter(REFREGEXP_FIELD) final String referenceRegexp) {
+			try {
+				JSONObject[] foundTasks = queryTasks(getGlobalConfiguration(), projectIdentifier, query,
+						referenceRegexp, null);
+				return FormValidation.ok(Messages.test_query_found_tasks(foundTasks.length));
+			} catch (Exception e) {
+				return FormValidation.error(Messages.testconnection_error(e.getMessage()));
+			}
 		}
 
 		/**

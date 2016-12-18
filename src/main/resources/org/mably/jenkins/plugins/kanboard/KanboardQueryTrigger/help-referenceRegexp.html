@@ -1,0 +1,13 @@
+<div>
+  <p>The trigger will only activate for tasks whose reference matches the regular expression.  No filtering will be done if left blank.</p>
+  <p>The eventual regexp matching groups will be exported to the KANBOARD_TASKREF_{index of group} environment variables.</p>
+  <p>For example:</p>
+  <p>
+  The regular expression <code>([A-Z]+)-([0-9]+)</code> will match the reference <code>ABC-12345</code> and will export the following environment variables:<br/>
+  <ul>
+  <li><code>KANBOARD_TASKREF=ABC-12345</code></li>
+  <li><code>KANBOARD_TASKREF_0=ABC</code></li>
+  <li><code>KANBOARD_TASKREF_1=12345</code></li>
+  </ul>
+  </p>
+</div>
