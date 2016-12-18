@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+  Ce plugin permet de créer ou modifier une tâche Kanboard via une action post-build, de déclencher un build lorsqu'une tâche Kanboard est créée ou déplacée, et de récupérer une tâche et ses éventuelles pièces-jointes lors d'une étape de build.
+</div>
