@@ -1,8 +1,10 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <f:entry title="${%cron}" field="crontabSpec">
-    <f:textbox default="*/5 * * * *"/>
-  </f:entry>
+  <f:entry title="${%schedule}" field="crontabSpec" help="/descriptor/hudson.triggers.TimerTrigger/help/spec">
+    <f:textbox
+      checkUrl="'${rootURL}/trigger/TimerTrigger/check?value='+encodeURIComponent(this.value)"
+      default="H/5 * * * *" />
+  </f:entry>  
   <f:entry title="${%project.identifier.required}" field="projectIdentifier">
     <f:textbox />
   </f:entry>
@@ -12,4 +14,7 @@
   <f:entry title="${%reference.regexp}" field="referenceRegexp">
     <f:textbox />
   </f:entry>
+  <f:validateButton
+    title="${%test.query}" progress="${%testing}"
+    method="testQuery" with="projectIdentifier,query,referenceRegexp" />
 </j:jelly>

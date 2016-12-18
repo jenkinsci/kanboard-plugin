@@ -1,0 +1,13 @@
+<div>
+  <p>Le déclencheur ne s'activera que pour les tâches dont l'expression régulière valide le champ "référence".  Aucun filtrage ne sera appliqué si le champ est laissé vide.</p>
+  <p>Les éventuels groupes de correspondance de l'expression régulière seront exportés dans les variables d'environnement suivantes&nbsp;: KANBOARD_TASKREF_{index du groupe}</p>
+  <p>Par exemple&nbsp;:</p>
+  <p>
+  L'expression régulière <code>([A-Z]+)-([0-9]+)</code> validera la référence <code>ABC-12345</code> et produira les variables d'environnement suivantes&nbsp;:<br/>
+  <ul>
+  <li><code>KANBOARD_TASKREF=ABC-12345</code></li>
+  <li><code>KANBOARD_TASKREF_0=ABC</code></li>
+  <li><code>KANBOARD_TASKREF_1=12345</code></li>
+  </ul>
+  </p>
+</div>

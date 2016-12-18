@@ -254,36 +254,37 @@ public class Utils {
 		return data;
 	}
 
-	public static EnvVars getGlobalEnvVars() {
+	public static EnvVars getNodeEnvVars() {
 
-		EnvVars envVars;
+		EnvVars envVars = new EnvVars();
 
 		Jenkins jenkins = Jenkins.getInstance();
 
-		if (jenkins == null) {
+		if (jenkins != null) {
 
-			envVars = new EnvVars();
+			// extracts global node properties from environment, add them to new
+			// empty local list
+			DescribableList<NodeProperty<?>, NodePropertyDescriptor> globalProps = jenkins.getGlobalNodeProperties();
+			if (globalProps != null) {
+				final EnvironmentVariablesNodeProperty envClass = globalProps
+						.get(EnvironmentVariablesNodeProperty.class);
+				if (envClass != null) {
+					envVars.putAll(envClass.getEnvVars());
+				}
+			}
 
-		} else {
-
-			DescribableList<NodeProperty<?>, NodePropertyDescriptor> nodeProps = jenkins.getGlobalNodeProperties();
-
-			List<EnvironmentVariablesNodeProperty> envVarNodeProps = nodeProps
-					.getAll(EnvironmentVariablesNodeProperty.class);
-
-			if (envVarNodeProps.isEmpty()) {
-				envVars = new EnvVars();
-			} else {
-				envVars = ((EnvironmentVariablesNodeProperty) envVarNodeProps.get(0)).getEnvVars();
+			// extracts specific node properties from environment, merge them
+			// with local copy of global list
+			DescribableList<NodeProperty<?>, NodePropertyDescriptor> nodeProps = jenkins.getNodeProperties();
+			if (nodeProps != null) {
+				final EnvironmentVariablesNodeProperty envClass = nodeProps.get(EnvironmentVariablesNodeProperty.class);
+				if (envClass != null) {
+					envVars.putAll(envClass.getEnvVars());
+				}
 			}
 		}
 
 		return envVars;
-	}
-
-	public static String expandFromGlobalEnvVars(String s) {
-		EnvVars envVars = Utils.getGlobalEnvVars();
-		return envVars.expand(s);
 	}
 
 }
