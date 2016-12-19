@@ -12,6 +12,9 @@
     <f:entry title="${%jsonrpc.apitokencredentialid}" field="apiTokenCredentialId">
       <c:select/>
     </f:entry>    
+    <f:entry title="${%attachment.max.size}" field="attachmentMaxSize">
+      <f:number />
+    </f:entry>    
     <f:validateButton
        title="${%test.connection}" progress="${%testing}"
        method="testConnection" with="endpoint,apiToken,apiTokenCredentialId" />

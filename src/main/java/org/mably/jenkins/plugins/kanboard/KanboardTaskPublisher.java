@@ -402,6 +402,11 @@ public class KanboardTaskPublisher extends Notifier {
 							logger.println(Messages.attachment_file_not_found(file.getCanonicalPath()));
 							continue;
 						}
+						if ((config.getAttachmentMaxSize() != 0) && (file.length() > config.getAttachmentMaxSize())) {
+							logger.println(Messages.attachment_file_too_big(file.getCanonicalPath(), file.length(),
+									config.getAttachmentMaxSize()));
+							continue;
+						}
 
 						String filename = file.getName();
 

@@ -28,11 +28,15 @@ public class KanboardGlobalConfiguration extends GlobalConfiguration {
 	static final String ENDPOINT_FIELD = "endpoint";
 	static final String APITOKEN_FIELD = "apiToken";
 	static final String APITOKENCREDENTIALID_FIELD = "apiTokenCredentialId";
+	static final String ATTACHMENTMAXSIZE_FIELD = "attachmentMaxSize";
 	static final String DEBUGMODE_FIELD = "debugMode";
+
+	static final long DEFAULT_ATTACHMENTMAXSIZE = 1000000;
 
 	public String endpoint;
 	public String apiToken;
 	public String apiTokenCredentialId;
+	public long attachmentMaxSize = DEFAULT_ATTACHMENTMAXSIZE;
 	public boolean debugMode;
 
 	/**
@@ -66,6 +70,10 @@ public class KanboardGlobalConfiguration extends GlobalConfiguration {
 
 	public String getApiTokenCredentialId() {
 		return apiTokenCredentialId;
+	}
+
+	public long getAttachmentMaxSize() {
+		return attachmentMaxSize;
 	}
 
 	public boolean isDebugMode() {
@@ -116,6 +124,7 @@ public class KanboardGlobalConfiguration extends GlobalConfiguration {
 		endpoint = formData.getString(ENDPOINT_FIELD);
 		apiToken = formData.getString(APITOKEN_FIELD);
 		apiTokenCredentialId = formData.getString(APITOKENCREDENTIALID_FIELD);
+		attachmentMaxSize = formData.getLong(ATTACHMENTMAXSIZE_FIELD);
 		debugMode = formData.getBoolean(DEBUGMODE_FIELD);
 		save();
 		return super.configure(req, formData);
