@@ -43,6 +43,7 @@ public class Kanboard {
 	private static final String GET_PROJECT_BY_IDENTIFIER = "getProjectByIdentifier";
 	private static final String GET_TASK = "getTask";
 	private static final String GET_TASK_BY_REFERENCE = "getTaskByReference";
+	private static final String GET_TASK_TAGS = "getTaskTags";
 	private static final String GET_USER = "getUser";
 	private static final String GET_USER_BY_NAME = "getUserByName";
 	private static final String GET_VERSION = "getVersion";
@@ -69,6 +70,7 @@ public class Kanboard {
 	static final String POSITION = "position";
 	static final String REFERENCE = "reference";
 	static final String SWIMLANE_ID = "swimlane_id";
+	static final String TAGS = "tags";
 	static final String TITLE = "title";
 	static final String URL = "url";
 	static final String USER_ID = "user_id";
@@ -208,7 +210,7 @@ public class Kanboard {
 
 	public static Object createTask(JSONRPC2Session session, PrintStream logger, String projectId, String taskRefValue,
 			String creatorId, String ownerId, String taskTitleValue, String taskDescValue, String columnId,
-			String swimlaneId, String taskColorValue, boolean debugMode)
+			String swimlaneId, String taskColorValue, String[] taskTags, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createTask request
@@ -245,6 +247,10 @@ public class Kanboard {
 
 		if (StringUtils.isNotBlank(taskColorValue)) {
 			params.put(COLOR_ID, taskColorValue);
+		}
+
+		if (ArrayUtils.isNotEmpty(taskTags)) {
+			params.put(TAGS, taskTags);
 		}
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
@@ -542,6 +548,35 @@ public class Kanboard {
 		}
 	}
 
+	public static JSONObject getTaskTags(JSONRPC2Session session, PrintStream logger, Integer taskId, boolean debugMode)
+			throws AbortException, JSONRPC2SessionException {
+
+		// Construct new getTaskTags request
+		String method = GET_TASK_TAGS;
+		HashMap<String, Object> params = new HashMap<String, Object>();
+		params.put(TASK_ID, taskId);
+
+		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
+		if (debugMode) {
+			logger.println(request.toJSONString());
+		}
+
+		// Send request
+		JSONRPC2Response response = session.send(request);
+		if (debugMode) {
+			logger.println(response.toJSONString());
+			logger.println(Utils.LOG_SEPARATOR);
+		}
+
+		// Print response result / error
+		if (response.indicatesSuccess()) {
+			return (JSONObject) response.getResult();
+		} else {
+			logger.println(response.getError().getMessage());
+			throw new AbortException(response.getError().getMessage());
+		}
+	}
+
 	public static JSONObject getUser(JSONRPC2Session session, PrintStream logger, String userId, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
@@ -725,16 +760,20 @@ public class Kanboard {
 		}
 	}
 
-	public static boolean updateTask(JSONRPC2Session session, PrintStream logger, String taskId, String newOwnerId,
-			boolean debugMode) throws JSONRPC2SessionException, AbortException {
+	public static boolean updateTask(JSONRPC2Session session, PrintStream logger, String taskId, String ownerId,
+			String[] taskTags, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new updateTask request
 		String method = UPDATE_TASK;
 		HashMap<String, Object> params = new HashMap<String, Object>();
 		params.put(ID, taskId);
 
-		if (StringUtils.isNotBlank(newOwnerId)) {
-			params.put(OWNER_ID, newOwnerId);
+		if (StringUtils.isNotBlank(ownerId)) {
+			params.put(OWNER_ID, ownerId);
+		}
+
+		if (ArrayUtils.isNotEmpty(taskTags)) {
+			params.put(TAGS, taskTags);
 		}
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);

@@ -41,6 +41,9 @@
     <f:entry title="${%color}" field="taskColor">
       <f:select value="${taskColor}" />
     </f:entry>
+    <f:entry title="${%tags}" field="taskTags">
+      <f:textbox />
+    </f:entry>
     <f:entry title="${%comment}" field="taskComment">
       <f:textarea />
     </f:entry>    

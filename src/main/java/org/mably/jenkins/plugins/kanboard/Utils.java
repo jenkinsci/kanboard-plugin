@@ -14,6 +14,7 @@ import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
@@ -193,17 +194,32 @@ public class Utils {
 
 	public static String[] getCSVStringValue(AbstractBuild<?, ?> build, TaskListener listener, String line)
 			throws MacroEvaluationException, IOException, InterruptedException {
-		String[] itemValues;
+		return getCSVStringValue(build, listener, line, 0);
+	}
+
+	public static String[] getCSVStringValue(AbstractBuild<?, ?> build, TaskListener listener, String line,
+			int expandingDepth) throws MacroEvaluationException, IOException, InterruptedException {
+		List<String> itemValues = new ArrayList<String>();
+		getCSVStringValue(build, listener, line, itemValues, expandingDepth);
+		return (itemValues.size() == 0) ? null : itemValues.toArray(new String[itemValues.size()]);
+	}
+
+	private static void getCSVStringValue(AbstractBuild<?, ?> build, TaskListener listener, String line,
+			List<String> itemValues, int expandingDepth)
+			throws MacroEvaluationException, IOException, InterruptedException {
 		if (StringUtils.isNotBlank(line)) {
 			String[] items = line.split(COMMA);
-			itemValues = new String[items.length];
 			for (int i = 0; i < items.length; i++) {
-				itemValues[i] = TokenMacro.expandAll(build, listener, items[i]);
+				String expandedValue = TokenMacro.expandAll(build, listener, items[i]);
+				if (expandingDepth > 0) {
+					getCSVStringValue(build, listener, expandedValue, itemValues, (expandingDepth - 1));
+				} else {
+					if (StringUtils.isNotBlank(expandedValue)) {
+						itemValues.add(expandedValue);
+					}
+				}
 			}
-		} else {
-			itemValues = null;
 		}
-		return itemValues;
 	}
 
 	private static String getTokenToUse(String apiTokenCredentialId, String apiToken) {
