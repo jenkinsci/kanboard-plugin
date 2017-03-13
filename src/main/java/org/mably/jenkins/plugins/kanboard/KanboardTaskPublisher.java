@@ -56,6 +56,7 @@ public class KanboardTaskPublisher extends Notifier {
 	private String taskExternalLinks;
 	private String taskSwimlane;
 	private String taskColor;
+	private String taskTags;
 	private String taskComment;
 	private String taskSubtaskTitle;
 
@@ -111,6 +112,10 @@ public class KanboardTaskPublisher extends Notifier {
 
 	public String getTaskColor() {
 		return taskColor;
+	}
+
+	public String getTaskTags() {
+		return taskTags;
 	}
 
 	public String getTaskComment() {
@@ -172,6 +177,11 @@ public class KanboardTaskPublisher extends Notifier {
 	}
 
 	@DataBoundSetter
+	public void setTaskTags(String taskTags) {
+		this.taskTags = taskTags;
+	}
+
+	@DataBoundSetter
 	public void setTaskComment(String taskComment) {
 		this.taskComment = taskComment;
 	}
@@ -224,6 +234,8 @@ public class KanboardTaskPublisher extends Notifier {
 			String taskCommentValue = TokenMacro.expandAll(build, listener, this.taskComment);
 			String taskSubtaskTitleValue = TokenMacro.expandAll(build, listener, this.taskSubtaskTitle);
 
+			String[] taskTagsValue = Utils.getCSVStringValue(build, listener, this.taskTags, 2);
+
 			String[] taskAttachmentsValue = Utils.getCSVStringValue(build, listener, this.taskAttachments);
 
 			String[] taskExternalLinksValue = Utils.getCSVStringValue(build, listener, this.taskExternalLinks);
@@ -233,6 +245,8 @@ public class KanboardTaskPublisher extends Notifier {
 
 			JSONRPC2Session session = Utils.initJSONRPCSession(config.getEndpoint(), config.getApiToken(),
 					config.getApiTokenCredentialId());
+
+			// String version = Kanboard.getVersion(session, null, false);
 
 			JSONObject jsonProject = Kanboard.getProjectByIdentifier(session, logger, projectIdentifierValue,
 					debugMode);
@@ -327,6 +341,56 @@ public class KanboardTaskPublisher extends Notifier {
 				ownerChanged = (newOwnerId != null) && ObjectUtils.notEqual(ownerId, newOwnerId);
 			}
 
+			String[] newTaskTags = null;
+			boolean tagsChanged = false;
+			if (ArrayUtils.isNotEmpty(taskTagsValue)) {
+
+				JSONObject jsonTags;
+				if (taskId == null) {
+					jsonTags = null;
+				} else {
+					try {
+						jsonTags = Kanboard.getTaskTags(session, logger, Integer.valueOf(taskId), debugMode);
+					} catch (Exception e) {
+						jsonTags = null;
+						logger.println(e.getMessage());
+					}
+				}
+
+				String[] taskTags = null;
+				if (jsonTags != null) {
+					taskTags = new String[jsonTags.size()];
+					int i = 0;
+					for (Object jsonTag : jsonTags.values()) {
+						taskTags[i] = (String) jsonTag;
+						i++;
+					}
+				}
+
+				if (ArrayUtils.isNotEmpty(taskTags)) {
+					newTaskTags = (String[]) ArrayUtils.clone(taskTags);
+				} else {
+					newTaskTags = new String[0];
+				}
+				for (int i = 0; i < taskTagsValue.length; i++) {
+					String tagValue = taskTagsValue[i];
+					if (StringUtils.isNotEmpty(tagValue)) {
+						boolean removeTag = (tagValue.charAt(0) == '-');
+						String tag = tagValue.replaceFirst("[\\+\\-]*([\\w\\-]*)", "$1");
+						if (ArrayUtils.contains(newTaskTags, tag)) {
+							if (removeTag) {
+								newTaskTags = (String[]) ArrayUtils.removeElement(newTaskTags, tag);
+							}
+						} else {
+							if (!removeTag) {
+								newTaskTags = (String[]) ArrayUtils.add(newTaskTags, tag);
+							}
+						}
+					}
+				}
+				tagsChanged = !ArrayUtils.isEquals(taskTags, newTaskTags);
+			}
+
 			boolean newTask = (taskId == null);
 			if (newTask) {
 
@@ -335,7 +399,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 				Object createResult = Kanboard.createTask(session, logger, projectId, taskRefValue, creatorId,
 						((newOwnerId == null) ? creatorId : newOwnerId), taskTitleValue, taskDescValue, newColumnId,
-						newSwimlaneId, taskColorValue, debugMode);
+						newSwimlaneId, taskColorValue, newTaskTags, debugMode);
 
 				if (createResult.equals(Boolean.FALSE)) {
 					throw new AbortException(Messages.task_create_error(taskRefValue));
@@ -357,9 +421,10 @@ public class KanboardTaskPublisher extends Notifier {
 
 			}
 
-			if (!newTask && ownerChanged) {
+			if (!newTask && (ownerChanged || tagsChanged)) {
 
-				if (Kanboard.updateTask(session, logger, taskId, newOwnerId, debugMode)) {
+				String taskOwnerId = (ownerChanged) ? newOwnerId : ownerId;
+				if (Kanboard.updateTask(session, logger, taskId, taskOwnerId, newTaskTags, debugMode)) {
 					logger.println(Messages.task_owner_updated(taskRefValue, taskOwnerValue));
 				}
 
