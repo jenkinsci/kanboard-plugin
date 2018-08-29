@@ -21,6 +21,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 @Extension
 public class KanboardGlobalConfiguration extends GlobalConfiguration {
@@ -88,7 +89,9 @@ public class KanboardGlobalConfiguration extends GlobalConfiguration {
 		return Messages.kanboard_publisher();
 	}
 
+	@RequirePOST
 	public FormValidation doCheckEndpoint(@QueryParameter String endpoint) throws IOException, ServletException {
+		Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
 		if (StringUtils.isNotBlank(endpoint)) {
 			if (!Utils.checkJSONRPCEndpoint(endpoint)) {
 				return FormValidation.error(Messages.invalid_endpoint_error());
