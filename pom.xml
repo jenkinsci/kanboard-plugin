@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>kanboard</artifactId>
-  <version>1.5.10-SNAPSHOT</version>
+  <version>1.5.9-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Kanboard Plugin</name>
