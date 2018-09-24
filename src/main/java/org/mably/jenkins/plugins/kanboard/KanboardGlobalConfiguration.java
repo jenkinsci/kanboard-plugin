@@ -108,6 +108,7 @@ public class KanboardGlobalConfiguration extends GlobalConfiguration {
 			@QueryParameter(APITOKEN_FIELD) final String apiToken,
 			@QueryParameter(APITOKENCREDENTIALID_FIELD) final String apiTokenCredentialId)
 			throws IOException, ServletException {
+		Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
 		if (StringUtils.isNotBlank(endpoint) && Utils.checkJSONRPCEndpoint(endpoint)
 				&& (StringUtils.isNotBlank(apiToken) || StringUtils.isNotBlank(apiTokenCredentialId))) {
 			try {
