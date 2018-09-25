@@ -104,6 +104,7 @@ public class KanboardGlobalConfiguration extends GlobalConfiguration {
 		return FormValidation.ok();
 	}
 
+	@RequirePOST
 	public FormValidation doTestConnection(@QueryParameter(ENDPOINT_FIELD) final String endpoint,
 			@QueryParameter(APITOKEN_FIELD) final String apiToken,
 			@QueryParameter(APITOKENCREDENTIALID_FIELD) final String apiTokenCredentialId)
