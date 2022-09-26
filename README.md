@@ -17,9 +17,10 @@ projects using a Lean
 
 ### Change Log
 
-##### Versions 1.5.12 (Sep 26, 2022
+##### Versions 1.5.12-1.5.13 (Sep 26, 2022
 
 -   Fixes ClassCastException crashes with latest release of Kanboard.
+-   Update project URL for documentation
 
 ##### Versions 1.5.9-1.5.11 (Sep 25, 2018)
 
