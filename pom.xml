@@ -5,12 +5,12 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.11</version>
+    <version>2.21</version>
     <relativePath />
   </parent>
 
   <artifactId>kanboard</artifactId>
-  <version>1.5.12-SNAPSHOT</version>
+  <version>1.5.12</version>
   <packaging>hpi</packaging>
 
   <name>Kanboard Plugin</name>
@@ -30,6 +30,7 @@
          ~ stapler-plugin.version: The Stapler Maven plugin version required by the plugin.
     -->
     <jsonrpc2.version>1.15</jsonrpc2.version>
+    <findbugs.failOnError>false</findbugs.failOnError>
   </properties>
 
   <!-- The default licence for Jenkins OSS Plugins is MIT. Substitute for the applicable one if needed. -->
@@ -55,7 +56,7 @@
     <connection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
     <developerConnection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-    <tag>HEAD</tag>
+    <tag>kanboard-1.5.12</tag>
   </scm>
 
   <repositories>
