@@ -253,17 +253,17 @@ public class KanboardTaskPublisher extends Notifier {
 			if (jsonProject == null) {
 				throw new AbortException(Messages.project_not_found(projectIdentifierValue));
 			}
-			String projectId = (String) jsonProject.get(Kanboard.ID);
+			Object projectId = jsonProject.get(Kanboard.ID);
 
 			JSONArray projectColumns = Kanboard.getProjectColumns(session, logger, projectId, debugMode);
 
 			JSONObject jsonTask = Kanboard.getTaskByReference(session, logger, projectId, taskRefValue, debugMode);
 
-			String taskId;
-			String ownerId;
-			String columnId;
+			Object taskId;
+			Object ownerId;
+			Object columnId;
 			Integer colPosition;
-			String swimlaneId;
+			Object swimlaneId;
 			String taskURL;
 			if (jsonTask == null) {
 				taskId = null;
@@ -273,16 +273,16 @@ public class KanboardTaskPublisher extends Notifier {
 				swimlaneId = null;
 				taskURL = null;
 			} else {
-				taskId = (String) jsonTask.get(Kanboard.ID);
-				ownerId = (String) jsonTask.get(Kanboard.OWNER_ID);
-				columnId = (String) jsonTask.get(Kanboard.COLUMN_ID);
+				taskId = jsonTask.get(Kanboard.ID);
+				ownerId = jsonTask.get(Kanboard.OWNER_ID);
+				columnId = jsonTask.get(Kanboard.COLUMN_ID);
 				colPosition = Kanboard.getColPositionFromColumnId(columnId, projectColumns);
-				swimlaneId = (String) jsonTask.get(Kanboard.SWIMLANE_ID);
-				taskURL = (String) jsonTask.get(Kanboard.URL);
+				swimlaneId = jsonTask.get(Kanboard.SWIMLANE_ID);
+				taskURL = String.valueOf(jsonTask.get(Kanboard.URL));
 			}
 
 			boolean columnChanged = false;
-			String newColumnId = null;
+			Object newColumnId = null;
 			Integer newColPosition = null;
 			if (StringUtils.isNotEmpty(taskColumnValue) && Utils.isInteger(taskColumnValue)) {
 
@@ -319,23 +319,23 @@ public class KanboardTaskPublisher extends Notifier {
 				}
 			}
 
-			String creatorId = null;
+			Object creatorId = null;
 			if (StringUtils.isNotEmpty(taskCreatorValue)) {
 				JSONObject jsonCreator = Kanboard.getUserByName(session, logger, taskCreatorValue, debugMode);
 				if (jsonCreator != null) {
-					creatorId = (String) jsonCreator.get(Kanboard.ID);
+					creatorId = jsonCreator.get(Kanboard.ID);
 				}
 			}
 
 			boolean ownerChanged = false;
-			String newOwnerId = null;
+			Object newOwnerId = null;
 			if (StringUtils.isNotEmpty(taskOwnerValue)) {
 				if ((creatorId != null) && (taskOwnerValue.equals(taskCreatorValue))) {
 					newOwnerId = creatorId;
 				} else {
 					JSONObject jsonOwner = Kanboard.getUserByName(session, logger, taskOwnerValue, debugMode);
 					if (jsonOwner != null) {
-						newOwnerId = (String) jsonOwner.get(Kanboard.ID);
+						newOwnerId = jsonOwner.get(Kanboard.ID);
 					}
 				}
 				ownerChanged = (newOwnerId != null) && ObjectUtils.notEqual(ownerId, newOwnerId);
@@ -350,7 +350,7 @@ public class KanboardTaskPublisher extends Notifier {
 					jsonTags = null;
 				} else {
 					try {
-						jsonTags = Kanboard.getTaskTags(session, logger, Integer.valueOf(taskId), debugMode);
+						jsonTags = Kanboard.getTaskTags(session, logger, taskId, debugMode);
 					} catch (Exception e) {
 						jsonTags = null;
 						logger.println(e.getMessage());
@@ -362,7 +362,7 @@ public class KanboardTaskPublisher extends Notifier {
 					taskTags = new String[jsonTags.size()];
 					int i = 0;
 					for (Object jsonTag : jsonTags.values()) {
-						taskTags[i] = (String) jsonTag;
+						taskTags[i] = String.valueOf(jsonTag);
 						i++;
 					}
 				}
@@ -412,18 +412,18 @@ public class KanboardTaskPublisher extends Notifier {
 				if (jsonTask == null) {
 					throw new AbortException(Messages.task_fetch_error(taskId));
 				} else {
-					ownerId = (String) jsonTask.get(Kanboard.OWNER_ID);
-					columnId = (String) jsonTask.get(Kanboard.COLUMN_ID);
+					ownerId = jsonTask.get(Kanboard.OWNER_ID);
+					columnId = jsonTask.get(Kanboard.COLUMN_ID);
 					colPosition = Kanboard.getColPositionFromColumnId(columnId, projectColumns);
-					swimlaneId = (String) jsonTask.get(Kanboard.SWIMLANE_ID);
-					taskURL = (String) jsonTask.get(Kanboard.URL);
+					swimlaneId = jsonTask.get(Kanboard.SWIMLANE_ID);
+					taskURL = String.valueOf(jsonTask.get(Kanboard.URL));
 				}
 
 			}
 
 			if (!newTask && (ownerChanged || tagsChanged)) {
 
-				String taskOwnerId = (ownerChanged) ? newOwnerId : ownerId;
+				Object taskOwnerId = (ownerChanged) ? newOwnerId : ownerId;
 				if (Kanboard.updateTask(session, logger, taskId, taskOwnerId, newTaskTags, debugMode)) {
 					logger.println(Messages.task_owner_updated(taskRefValue, taskOwnerValue));
 				}
@@ -432,10 +432,10 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (!newTask && (columnChanged || swimlaneChanged)) {
 
-				if (Kanboard.moveTaskPosition(session, logger, Integer.valueOf(projectId), Integer.valueOf(taskId),
-						(newColumnId == null) ? Integer.valueOf(columnId) : Integer.valueOf(newColumnId),
+				if (Kanboard.moveTaskPosition(session, logger, projectId, taskId,
+						(newColumnId == null) ? columnId : newColumnId,
 						(newColPosition == null) ? colPosition : newColPosition,
-						(newSwimlaneId == null) ? Integer.valueOf(swimlaneId) : Integer.valueOf(newSwimlaneId),
+						(newSwimlaneId == null) ? swimlaneId : newSwimlaneId,
 						debugMode)) {
 					logger.println(Messages.task_position_move(taskRefValue, newColPosition));
 				}
@@ -444,14 +444,14 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (ArrayUtils.isNotEmpty(taskAttachmentsValue)) {
 
-				JSONArray jsonFiles = Kanboard.getAllTaskFiles(session, logger, Integer.valueOf(taskId), debugMode);
+				JSONArray jsonFiles = Kanboard.getAllTaskFiles(session, logger, taskId, debugMode);
 
 				Map<String, JSONObject> existingFiles = new HashMap<String, JSONObject>();
 
 				if (jsonFiles != null) {
 					for (int i = 0; i < jsonFiles.size(); i++) {
 						JSONObject jsonFile = (JSONObject) jsonFiles.get(i);
-						String name = (String) jsonFile.get(Kanboard.NAME);
+						String name = String.valueOf(jsonFile.get(Kanboard.NAME));
 						existingFiles.put(name, jsonFile);
 					}
 				}
@@ -478,9 +478,9 @@ public class KanboardTaskPublisher extends Notifier {
 						if (existingFiles.containsKey(filename)) {
 
 							JSONObject jsonFile = existingFiles.get(filename);
-							String fileId = (String) jsonFile.get(Kanboard.ID);
+							Object fileId = jsonFile.get(Kanboard.ID);
 
-							if (Kanboard.removeTaskFile(session, logger, Integer.valueOf(fileId), debugMode)) {
+							if (Kanboard.removeTaskFile(session, logger, fileId, debugMode)) {
 								logger.println(Messages.attachment_remove_sucess(filename, taskRefValue));
 							}
 
@@ -488,8 +488,8 @@ public class KanboardTaskPublisher extends Notifier {
 
 						String encodedFile = Utils.encodeFileToBase64Binary(file);
 
-						if (Kanboard.createTaskFile(session, logger, Integer.valueOf(projectId),
-								Integer.valueOf(taskId), filename, encodedFile, creatorId, debugMode)) {
+						if (Kanboard.createTaskFile(session, logger, projectId,
+								taskId, filename, encodedFile, creatorId, debugMode)) {
 							logger.println(Messages.attachment_create_sucess(path, taskRefValue));
 						}
 
@@ -504,15 +504,14 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (ArrayUtils.isNotEmpty(taskExternalLinksValue)) {
 
-				JSONArray jsonLinks = Kanboard.getAllExternalTaskLinks(session, logger, Integer.valueOf(taskId),
-						debugMode);
+				JSONArray jsonLinks = Kanboard.getAllExternalTaskLinks(session, logger, taskId, debugMode);
 
 				Map<String, JSONObject> existingLinks = new HashMap<String, JSONObject>();
 
 				if (jsonLinks != null) {
 					for (int i = 0; i < jsonLinks.size(); i++) {
 						JSONObject jsonLink = (JSONObject) jsonLinks.get(i);
-						String url = (String) jsonLink.get(Kanboard.URL);
+						String url = String.valueOf(jsonLink.get(Kanboard.URL));
 						existingLinks.put(url, jsonLink);
 					}
 				}
@@ -540,7 +539,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 					try {
 
-						if (Kanboard.createExternalTaskLink(session, logger, Integer.valueOf(taskId), url, title, type,
+						if (Kanboard.createExternalTaskLink(session, logger, taskId, url, title, type,
 								creatorId, debugMode)) {
 							logger.println(Messages.external_link_create_success(url, taskRefValue));
 						}
@@ -556,7 +555,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (StringUtils.isNotBlank(taskCommentValue)) {
 
-				Object createResult = Kanboard.createComment(session, logger, Integer.valueOf(taskId), creatorId,
+				Object createResult = Kanboard.createComment(session, logger, taskId, creatorId,
 						taskCommentValue, debugMode);
 				if (!createResult.equals(Boolean.FALSE)) {
 					logger.println(Messages.comment_create_sucess(taskCommentValue, createResult, taskRefValue));
@@ -566,8 +565,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 			if (StringUtils.isNotBlank(taskSubtaskTitleValue)) {
 
-				Object jsonSubtasksResult = Kanboard.getAllSubtasks(session, logger, Integer.valueOf(taskId),
-						debugMode);
+				Object jsonSubtasksResult = Kanboard.getAllSubtasks(session, logger, taskId, debugMode);
 
 				Map<String, JSONObject> existingSubtasks = new HashMap<String, JSONObject>();
 
@@ -575,8 +573,8 @@ public class KanboardTaskPublisher extends Notifier {
 					JSONArray jsonSubtasks = (JSONArray) jsonSubtasksResult;
 					for (int i = 0; i < jsonSubtasks.size(); i++) {
 						JSONObject jsonSubtask = (JSONObject) jsonSubtasks.get(i);
-						String title = (String) jsonSubtask.get(Kanboard.TITLE);
-						String userId = (String) jsonSubtask.get(Kanboard.USER_ID);
+						String title = String.valueOf(jsonSubtask.get(Kanboard.TITLE));
+						String userId = String.valueOf(jsonSubtask.get(Kanboard.USER_ID));
 						String key = title + "|" + userId;
 						existingSubtasks.put(key, jsonSubtask);
 					}
@@ -588,7 +586,7 @@ public class KanboardTaskPublisher extends Notifier {
 
 					try {
 
-						Object createResult = Kanboard.createSubtask(session, logger, Integer.valueOf(taskId), ownerId,
+						Object createResult = Kanboard.createSubtask(session, logger, taskId, ownerId,
 								taskSubtaskTitleValue, debugMode);
 						if (!createResult.equals(Boolean.FALSE)) {
 							logger.println(
