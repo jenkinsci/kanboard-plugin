@@ -13,7 +13,7 @@ public class KanboardQueryTriggerCause extends Cause {
 
 	@Override
 	public String getShortDescription() {
-		String title = (String) task.get(Kanboard.TITLE);
+		String title = String.valueOf(task.get(Kanboard.TITLE));
 		return title;
 	}
 

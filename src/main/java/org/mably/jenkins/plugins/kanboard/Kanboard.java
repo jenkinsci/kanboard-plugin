@@ -94,7 +94,7 @@ public class Kanboard {
 	static final String LIGHT_GREEN = "light_green";
 	static final String AMBER = "amber";
 
-	public static Object createComment(JSONRPC2Session session, PrintStream logger, Integer taskId, String userId,
+	public static Object createComment(JSONRPC2Session session, PrintStream logger, Object taskId, Object userId,
 			String content, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createComment request
@@ -103,8 +103,8 @@ public class Kanboard {
 		params.put(TASK_ID, taskId);
 		params.put(CONTENT, content);
 
-		if (StringUtils.isNotBlank(userId)) {
-			params.put(USER_ID, Integer.valueOf(userId));
+		if (userId != null && StringUtils.isNotBlank(String.valueOf(userId)))  {
+			params.put(USER_ID, userId);
 		}
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
@@ -128,8 +128,8 @@ public class Kanboard {
 		}
 	}
 
-	public static boolean createExternalTaskLink(JSONRPC2Session session, PrintStream logger, Integer taskId,
-			String url, String title, String type, String creatorId, boolean debugMode)
+	public static boolean createExternalTaskLink(JSONRPC2Session session, PrintStream logger, Object taskId,
+			String url, String title, String type, Object creatorId, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createExternalTaskLink request
@@ -149,8 +149,8 @@ public class Kanboard {
 			params.put(TITLE, title);
 		}
 
-		if (StringUtils.isNotBlank(creatorId)) {
-			params.put(CREATOR_ID, Integer.valueOf(creatorId));
+		if (creatorId != null && StringUtils.isNotBlank(String.valueOf(creatorId))) {
+			params.put(CREATOR_ID, creatorId);
 		}
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
@@ -174,7 +174,7 @@ public class Kanboard {
 		}
 	}
 
-	public static Object createSubtask(JSONRPC2Session session, PrintStream logger, Integer taskId, String userId,
+	public static Object createSubtask(JSONRPC2Session session, PrintStream logger, Object taskId, Object userId,
 			String title, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createSubtask request
@@ -183,8 +183,8 @@ public class Kanboard {
 		params.put(TASK_ID, taskId);
 		params.put(TITLE, title);
 
-		if (StringUtils.isNotBlank(userId)) {
-			params.put(USER_ID, Integer.valueOf(userId));
+		if (userId != null && StringUtils.isNotBlank(String.valueOf(userId))) {
+			params.put(USER_ID, userId);
 		}
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
@@ -208,9 +208,9 @@ public class Kanboard {
 		}
 	}
 
-	public static Object createTask(JSONRPC2Session session, PrintStream logger, String projectId, String taskRefValue,
-			String creatorId, String ownerId, String taskTitleValue, String taskDescValue, String columnId,
-			String swimlaneId, String taskColorValue, String[] taskTags, boolean debugMode)
+	public static Object createTask(JSONRPC2Session session, PrintStream logger, Object projectId, String taskRefValue,
+			Object creatorId, Object ownerId, String taskTitleValue, String taskDescValue, Object columnId,
+			Object swimlaneId, String taskColorValue, String[] taskTags, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createTask request
@@ -219,11 +219,11 @@ public class Kanboard {
 		params.put(PROJECT_ID, projectId);
 		params.put(REFERENCE, taskRefValue);
 
-		if (StringUtils.isNotBlank(creatorId)) {
+		if (creatorId != null && StringUtils.isNotBlank(String.valueOf(creatorId))) {
 			params.put(CREATOR_ID, creatorId);
 		}
 
-		if (StringUtils.isNotBlank(ownerId)) {
+		if (ownerId != null && StringUtils.isNotBlank(String.valueOf(ownerId))) {
 			params.put(OWNER_ID, ownerId);
 		}
 
@@ -237,11 +237,11 @@ public class Kanboard {
 			params.put(DESCRIPTION, taskDescValue);
 		}
 
-		if (StringUtils.isNotBlank(columnId)) {
+		if (columnId != null && StringUtils.isNotBlank(String.valueOf(columnId))) {
 			params.put(COLUMN_ID, columnId);
 		}
 
-		if (StringUtils.isNotBlank(swimlaneId)) {
+		if (swimlaneId != null && StringUtils.isNotBlank(String.valueOf(swimlaneId))) {
 			params.put(SWIMLANE_ID, swimlaneId);
 		}
 
@@ -274,8 +274,8 @@ public class Kanboard {
 		}
 	}
 
-	public static boolean createTaskFile(JSONRPC2Session session, PrintStream logger, Integer projectId, Integer taskId,
-			String filename, String encodedFile, String creatorId, boolean debugMode)
+	public static boolean createTaskFile(JSONRPC2Session session, PrintStream logger, Object projectId, Object taskId,
+			String filename, String encodedFile, Object creatorId, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new createTaskFile request
@@ -330,7 +330,7 @@ public class Kanboard {
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
-			return (String) response.getResult();
+			return String.valueOf(response.getResult());
 		} else {
 			if (debugMode && (logger != null)) {
 				logger.println(response.getError().getMessage());
@@ -339,7 +339,7 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONArray getAllExternalTaskLinks(JSONRPC2Session session, PrintStream logger, Integer taskId,
+	public static JSONArray getAllExternalTaskLinks(JSONRPC2Session session, PrintStream logger, Object taskId,
 			boolean debugMode) throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getAllExternalTaskLinks request
@@ -368,7 +368,7 @@ public class Kanboard {
 		}
 	}
 
-	public static Object getAllSubtasks(JSONRPC2Session session, PrintStream logger, Integer taskId, boolean debugMode)
+	public static Object getAllSubtasks(JSONRPC2Session session, PrintStream logger, Object taskId, boolean debugMode)
 			throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getAllSubtasks request
@@ -397,7 +397,7 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONArray getAllTaskFiles(JSONRPC2Session session, PrintStream logger, Integer taskId,
+	public static JSONArray getAllTaskFiles(JSONRPC2Session session, PrintStream logger, Object taskId,
 			boolean debugMode) throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getAllTaskFiles request
@@ -427,7 +427,7 @@ public class Kanboard {
 	}
 
 	public static JSONObject getProjectByIdentifier(JSONRPC2Session session, PrintStream logger,
-			String projectIdentifierValue, boolean debugMode) throws JSONRPC2SessionException, AbortException {
+			Object projectIdentifierValue, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 		// Construct new getProjectByIdentifier request
 		String method = GET_PROJECT_BY_IDENTIFIER;
 		Map<String, Object> params = new HashMap<String, Object>();
@@ -454,7 +454,7 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONArray getProjectColumns(JSONRPC2Session session, PrintStream logger, String projectId,
+	public static JSONArray getProjectColumns(JSONRPC2Session session, PrintStream logger, Object projectId,
 			boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new getColumns request
@@ -489,13 +489,13 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONObject getTask(JSONRPC2Session session, PrintStream logger, String taskId, boolean debugMode)
+	public static JSONObject getTask(JSONRPC2Session session, PrintStream logger, Object taskId, boolean debugMode)
 			throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getTask request
 		String method = GET_TASK;
 		HashMap<String, Object> params = new HashMap<String, Object>();
-		params.put(TASK_ID, Integer.valueOf(taskId));
+		params.put(TASK_ID, taskId);
 
 		JSONRPC2Request request = new JSONRPC2Request(method, params, 0);
 		if (debugMode) {
@@ -518,7 +518,7 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONObject getTaskByReference(JSONRPC2Session session, PrintStream logger, String projectId,
+	public static JSONObject getTaskByReference(JSONRPC2Session session, PrintStream logger, Object projectId,
 			String taskRefValue, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new getTaskByReference request
@@ -548,7 +548,7 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONObject getTaskTags(JSONRPC2Session session, PrintStream logger, Integer taskId, boolean debugMode)
+	public static JSONObject getTaskTags(JSONRPC2Session session, PrintStream logger, Object taskId, boolean debugMode)
 			throws AbortException, JSONRPC2SessionException {
 
 		// Construct new getTaskTags request
@@ -577,7 +577,7 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONObject getUser(JSONRPC2Session session, PrintStream logger, String userId, boolean debugMode)
+	public static JSONObject getUser(JSONRPC2Session session, PrintStream logger, Object userId, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new getUser request
@@ -656,7 +656,7 @@ public class Kanboard {
 
 		// Print response result / error
 		if (response.indicatesSuccess()) {
-			return (String) response.getResult();
+			return String.valueOf(response.getResult());
 		} else {
 			if (debugMode && (logger != null)) {
 				logger.println(response.getError().getMessage());
@@ -665,8 +665,8 @@ public class Kanboard {
 		}
 	}
 
-	public static boolean moveTaskPosition(JSONRPC2Session session, PrintStream logger, Integer projectId,
-			Integer taskId, Integer newColumnId, Integer newPosition, Integer swimlaneId, boolean debugMode)
+	public static boolean moveTaskPosition(JSONRPC2Session session, PrintStream logger, Object projectId,
+			Object taskId, Object newColumnId, Object newPosition, Object swimlaneId, boolean debugMode)
 			throws AbortException, JSONRPC2SessionException {
 
 		// Construct new moveTaskPosition request
@@ -676,7 +676,7 @@ public class Kanboard {
 		params.put(TASK_ID, taskId);
 		params.put(COLUMN_ID, newColumnId);
 		params.put(POSITION, newPosition);
-		if (swimlaneId != null) {
+		if (swimlaneId != null && StringUtils.isNotBlank(String.valueOf(swimlaneId))) {
 			params.put(SWIMLANE_ID, swimlaneId);
 		}
 
@@ -701,7 +701,7 @@ public class Kanboard {
 		}
 	}
 
-	public static boolean removeTaskFile(JSONRPC2Session session, PrintStream logger, Integer fileId, boolean debugMode)
+	public static boolean removeTaskFile(JSONRPC2Session session, PrintStream logger, Object fileId, boolean debugMode)
 			throws JSONRPC2SessionException, AbortException {
 
 		// Construct new removeTaskFile request
@@ -730,7 +730,7 @@ public class Kanboard {
 		}
 	}
 
-	public static JSONArray searchTasks(JSONRPC2Session session, PrintStream logger, Integer projectId, String query,
+	public static JSONArray searchTasks(JSONRPC2Session session, PrintStream logger, Object projectId, String query,
 			boolean debugMode) throws AbortException, JSONRPC2SessionException {
 
 		// Construct new searchTasks request
@@ -760,7 +760,7 @@ public class Kanboard {
 		}
 	}
 
-	public static boolean updateTask(JSONRPC2Session session, PrintStream logger, String taskId, String ownerId,
+	public static boolean updateTask(JSONRPC2Session session, PrintStream logger, Object taskId, Object ownerId,
 			String[] taskTags, boolean debugMode) throws JSONRPC2SessionException, AbortException {
 
 		// Construct new updateTask request
@@ -768,7 +768,7 @@ public class Kanboard {
 		HashMap<String, Object> params = new HashMap<String, Object>();
 		params.put(ID, taskId);
 
-		if (StringUtils.isNotBlank(ownerId)) {
+		if (ownerId != null && StringUtils.isNotBlank(String.valueOf(ownerId))) {
 			params.put(OWNER_ID, ownerId);
 		}
 
@@ -797,24 +797,24 @@ public class Kanboard {
 		}
 	}
 
-	public static int getColPositionFromColumnId(String columnId, JSONArray projectColumns) {
+	public static int getColPositionFromColumnId(Object columnId, JSONArray projectColumns) {
 		int position = 0;
 		for (int i = 0; i < projectColumns.size(); i++) {
 			JSONObject column = (JSONObject) projectColumns.get(i);
 			if (column.get(ID).equals(columnId)) {
-				position = Integer.parseInt((String) column.get(POSITION));
+				position = Integer.parseInt(String.valueOf(column.get(POSITION)));
 				break;
 			}
 		}
 		return position;
 	}
 
-	public static String getColumnIdFromColPosition(Integer colPosition, JSONArray projectColumns) {
-		String columnId = null;
+	public static Object getColumnIdFromColPosition(Integer colPosition, JSONArray projectColumns) {
+		Object columnId = null;
 		for (int i = 0; i < projectColumns.size(); i++) {
 			JSONObject column = (JSONObject) projectColumns.get(i);
-			if (column.get(Kanboard.POSITION).equals(String.valueOf(colPosition))) {
-				columnId = (String) column.get(Kanboard.ID);
+			if (String.valueOf(column.get(Kanboard.POSITION)).equals(String.valueOf(colPosition))) {
+				columnId = column.get(Kanboard.ID);
 				break;
 			}
 		}

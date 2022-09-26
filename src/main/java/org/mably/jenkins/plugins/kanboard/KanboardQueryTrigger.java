@@ -75,7 +75,7 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 				KanboardQueryTriggerCause theCause = new KanboardQueryTriggerCause(task);
 				if (this.job instanceof AbstractProject) {
 					AbstractProject theJob = (AbstractProject) this.job;
-					String reference = (String) task.get(Kanboard.REFERENCE);
+					String reference = String.valueOf(task.get(Kanboard.REFERENCE));
 					StringParameterValue refParamValue = new StringParameterValue(
 							KanboardPlugin.KANBOARD_TASKREF_ENVVAR, reference);
 					List<ParameterValue> refParamValues = new ArrayList<ParameterValue>();
@@ -124,10 +124,10 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 			if (jsonProject == null) {
 				throw new RuntimeException(Messages.project_not_found(projectIdentifierValue));
 			}
-			String projectId = (String) jsonProject.get(Kanboard.ID);
+			Object projectId = jsonProject.get(Kanboard.ID);
 
 			String queryValue = Util.replaceMacro(query, envVars);
-			JSONArray jsonTasks = Kanboard.searchTasks(session, logger, Integer.valueOf(projectId), queryValue,
+			JSONArray jsonTasks = Kanboard.searchTasks(session, logger, projectId, queryValue,
 					debugMode);
 
 			Pattern referencePattern = getReferencePattern(referenceRegexp, envVars);
@@ -144,10 +144,10 @@ public class KanboardQueryTrigger extends Trigger<BuildableItem> {
 			for (int i = 0; i < jsonTasks.size(); i++) {
 				try {
 					JSONObject jsonTask = (JSONObject) jsonTasks.get(i);
-					String reference = (String) jsonTask.get(Kanboard.REFERENCE);
+					String reference = String.valueOf(jsonTask.get(Kanboard.REFERENCE));
 					String[] refGroups = getTaskRefMatchGroups(reference, referencePattern);
 					if (refGroups != null) {
-						String dateMoved = (String) jsonTask.get(Kanboard.DATE_MOVED);
+						String dateMoved = String.valueOf(jsonTask.get(Kanboard.DATE_MOVED));
 						int currentTimestamp = Integer.parseInt(dateMoved);
 						if (currentTimestamp > lastTriggerTimestamp) {
 							jsonTask.put(JSON_TASK_GROUPS, refGroups);

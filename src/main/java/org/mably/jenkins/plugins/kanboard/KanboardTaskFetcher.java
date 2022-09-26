@@ -143,7 +143,7 @@ public class KanboardTaskFetcher extends Builder {
 			if (jsonProject == null) {
 				throw new AbortException(Messages.project_not_found(projectIdentifierValue));
 			}
-			String projectId = (String) jsonProject.get(Kanboard.ID);
+			Object projectId = jsonProject.get(Kanboard.ID);
 
 			JSONObject jsonTask = Kanboard.getTaskByReference(session, logger, projectId, taskRefValue, debugMode);
 
@@ -153,31 +153,31 @@ public class KanboardTaskFetcher extends Builder {
 
 			} else {
 
-				String taskId = (String) jsonTask.get(Kanboard.ID);
-				String creatorId = (String) jsonTask.get(Kanboard.CREATOR_ID);
-				String ownerId = (String) jsonTask.get(Kanboard.OWNER_ID);
-				String title = (String) jsonTask.get(Kanboard.TITLE);
+				Object taskId = jsonTask.get(Kanboard.ID);
+				Object creatorId = jsonTask.get(Kanboard.CREATOR_ID);
+				Object ownerId = jsonTask.get(Kanboard.OWNER_ID);
+				String title = String.valueOf(jsonTask.get(Kanboard.TITLE));
 
-				Utils.exportEnvironmentVariable(build, KANBOARD_ID_ENVVAR, taskId);
+				Utils.exportEnvironmentVariable(build, KANBOARD_ID_ENVVAR, String.valueOf(taskId));
 
 				String creatorName = null;
-				if (StringUtils.isNotBlank(creatorId)) {
+				if (creatorId != null && StringUtils.isNotBlank(String.valueOf(creatorId))) {
 					JSONObject jsonCreator = Kanboard.getUser(session, logger, creatorId, debugMode);
 					if (jsonCreator != null) {
-						creatorName = (String) (String) jsonCreator.get(Kanboard.USERNAME);
+						creatorName = String.valueOf(jsonCreator.get(Kanboard.USERNAME));
 						Utils.exportEnvironmentVariable(build, KANBOARD_CREATOR_ENVVAR, creatorName);
 					}
 				}
 
 				String ownerName = null;
-				if (StringUtils.isNotBlank(ownerId)) {
+				if (ownerId != null && StringUtils.isNotBlank(String.valueOf(ownerId))) {
 					if (ownerId.equals(creatorId)) {
 						ownerName = creatorName;
 						Utils.exportEnvironmentVariable(build, KANBOARD_OWNER_ENVVAR, ownerName);
 					} else {
 						JSONObject jsonOwner = Kanboard.getUser(session, logger, ownerId, debugMode);
 						if (jsonOwner != null) {
-							ownerName = (String) (String) jsonOwner.get(Kanboard.USERNAME);
+							ownerName = String.valueOf(jsonOwner.get(Kanboard.USERNAME));
 							Utils.exportEnvironmentVariable(build, KANBOARD_OWNER_ENVVAR, ownerName);
 						}
 					}
@@ -191,17 +191,16 @@ public class KanboardTaskFetcher extends Builder {
 
 				if (ArrayUtils.isNotEmpty(taskLinksValue)) {
 
-					JSONArray jsonLinks = Kanboard.getAllExternalTaskLinks(session, logger, Integer.valueOf(taskId),
-							debugMode);
+					JSONArray jsonLinks = Kanboard.getAllExternalTaskLinks(session, logger, taskId, debugMode);
 
 					Map<String, JSONObject> existingLinks = new HashMap<String, JSONObject>();
 
 					if (jsonLinks != null) {
 						for (int i = 0; i < jsonLinks.size(); i++) {
 							JSONObject jsonLink = (JSONObject) jsonLinks.get(i);
-							String type = (String) jsonLink.get(Kanboard.LINK_TYPE);
+							String type = String.valueOf(jsonLink.get(Kanboard.LINK_TYPE));
 							if (Kanboard.LINKTYPE_ATTACHMENT.equals(type)) {
-								String linkUrl = (String) jsonLink.get(Kanboard.URL);
+								String linkUrl = String.valueOf(jsonLink.get(Kanboard.URL));
 								try {
 									URL url = new URL(linkUrl);
 									existingLinks.put(FilenameUtils.getName(url.getPath()), jsonLink);
@@ -221,8 +220,8 @@ public class KanboardTaskFetcher extends Builder {
 							if (existingLinks.containsKey(linkValue)) {
 
 								JSONObject jsonLink = existingLinks.get(linkValue);
-								String linkId = (String) jsonLink.get(Kanboard.ID);
-								String linkUrl = (String) jsonLink.get(Kanboard.URL);
+								String linkId = String.valueOf(jsonLink.get(Kanboard.ID));
+								String linkUrl = String.valueOf(jsonLink.get(Kanboard.URL));
 
 								byte[] fetchedData = Utils.fetchURL(new URL(linkUrl));
 								if (fetchedData != null) {
@@ -247,14 +246,14 @@ public class KanboardTaskFetcher extends Builder {
 
 				if (ArrayUtils.isNotEmpty(taskAttachmentsValue)) {
 
-					JSONArray jsonFiles = Kanboard.getAllTaskFiles(session, logger, Integer.valueOf(taskId), debugMode);
+					JSONArray jsonFiles = Kanboard.getAllTaskFiles(session, logger, taskId, debugMode);
 
 					Map<String, JSONObject> existingFiles = new HashMap<String, JSONObject>();
 
 					if (jsonFiles != null) {
 						for (int i = 0; i < jsonFiles.size(); i++) {
 							JSONObject jsonFile = (JSONObject) jsonFiles.get(i);
-							String name = (String) jsonFile.get(Kanboard.NAME);
+							String name = String.valueOf(jsonFile.get(Kanboard.NAME));
 							existingFiles.put(name, jsonFile);
 						}
 					}
@@ -268,7 +267,7 @@ public class KanboardTaskFetcher extends Builder {
 							if (existingFiles.containsKey(filename)) {
 
 								JSONObject jsonFile = existingFiles.get(filename);
-								String fileId = (String) jsonFile.get(Kanboard.ID);
+								String fileId = String.valueOf(jsonFile.get(Kanboard.ID));
 
 								String base64EncFile = Kanboard.downloadTaskFile(session, logger, fileId, debugMode);
 								if (StringUtils.isNotBlank(base64EncFile)) {
